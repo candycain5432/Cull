@@ -1,0 +1,76 @@
+filename,true_format,note
+.hidden_image.jpg,JPEG,hidden dotfile
+MixedCase.PnG,PNG,mixed-case extension
+UPPERCASE.JPG,JPEG,uppercase extension
+actually_a_jpeg.png,JPEG,WRONG extension: real JPEG named .png
+actually_a_png.jpg,PNG,WRONG extension: real PNG named .jpg
+animated.gif,GIF,"animated, 5 frames"
+café_ñ_日本.jpg,JPEG,unicode filename
+copy_of_original.jpg,JPEG,byte-identical duplicate of original.jpg
+corrupt_truncated.jpg,JPEG (broken),"truncated, will fail to fully load"
+data.csv,NON-IMAGE,distractor
+empty_zero_bytes.png,none,0-byte file
+fake_raw.arw,FAKE RAW,random bytes: tests extension routing only
+fake_raw.cr2,FAKE RAW,random bytes: tests extension routing only
+fake_raw.dng,FAKE RAW,random bytes: tests extension routing only
+fake_raw.nef,FAKE RAW,random bytes: tests extension routing only
+huge_8000x6000.jpg,JPEG,large dimensions
+img_avif_1.avif,AVIF,
+img_avif_2.avif,AVIF,
+img_avif_3.avif,AVIF,
+img_bmp_1.bmp,BMP,
+img_bmp_2.bmp,BMP,
+img_bmp_3.bmp,BMP,
+img_gif_1.gif,GIF,
+img_gif_2.gif,GIF,
+img_gif_3.gif,GIF,
+img_heic_1.heic,HEIF,
+img_heic_2.heic,HEIF,
+img_heic_3.heic,HEIF,
+img_ico_1.ico,ICO,
+img_ico_2.ico,ICO,
+img_ico_3.ico,ICO,
+img_jp2_1.jp2,JPEG2000,
+img_jp2_2.jp2,JPEG2000,
+img_jp2_3.jp2,JPEG2000,
+img_jpeg_1.jpeg,JPEG,has EXIF date 2018-10-18
+img_jpeg_2.jpeg,JPEG,
+img_jpeg_3.jpeg,JPEG,
+img_jpg_1.jpg,JPEG,has EXIF date 2025-11-25
+img_jpg_2.jpg,JPEG,
+img_jpg_3.jpg,JPEG,
+img_pcx_1.pcx,PCX,
+img_pcx_2.pcx,PCX,
+img_pcx_3.pcx,PCX,
+img_pdf_1.pdf,PDF,
+img_pdf_2.pdf,PDF,
+img_pdf_3.pdf,PDF,
+img_png_1.png,PNG,has EXIF date 2024-10-13
+img_png_2.png,PNG,
+img_png_3.png,PNG,
+img_ppm_1.ppm,PPM,
+img_ppm_2.ppm,PPM,
+img_ppm_3.ppm,PPM,
+img_tga_1.tga,TGA,
+img_tga_2.tga,TGA,
+img_tga_3.tga,TGA,
+img_tif_1.tif,TIFF,has EXIF date 2021-09-12
+img_tif_2.tif,TIFF,
+img_tif_3.tif,TIFF,
+img_tiff_1.tiff,TIFF,has EXIF date 2023-06-07
+img_tiff_2.tiff,TIFF,
+img_tiff_3.tiff,TIFF,
+img_webp_1.webp,WEBP,has EXIF date 2019-02-08
+img_webp_2.webp,WEBP,
+img_webp_3.webp,WEBP,
+nested/deeper/buried.png,PNG,inside subfolders
+no_extension,PNG,no extension at all
+not_an_image.jpg,TEXT,text file with image extension
+notes.txt,NON-IMAGE,distractor
+original.jpg,JPEG,duplicate pair (same bytes)
+photo.jpg.png,PNG,double extension
+readme.md,NON-IMAGE,distractor
+tiny_1x1.png,PNG,1x1 pixel
+vacation photo (1).jpg,JPEG,spaces and parentheses
+vector.svg,SVG,vector text file
+📸_emoji.png,PNG,emoji filename
