@@ -65,7 +65,7 @@ pip install -e .
 
 ### Requirements
 
-- Python 3.11 or newer
+- Python 3.12 or newer
 - Linux, macOS, or Windows
 
 ## Usage
