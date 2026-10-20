@@ -12,9 +12,9 @@
 
 ## Overview
 
-A typical photo shoot produces hundreds or thousands of frames, most of which will never be used. Sorting through them by hand is slow and repetitive. Cull automates the technical side of that process: it analyzes every photo in a folder, groups similar shots together, and recommends the strongest frame in each group.
+A typical photo shoot produces hundreds or thousands of frames, most of which will never be used. Sorting through them by hand is slow and repetitive. Cull automates the technical side of that process, it analyzes every photo in a folder, groups similar shots together, and recommends the strongest frame in each group.
 
-All final decisions remain with the photographer. Cull only recommends; it never deletes or modifies original files.
+All final decisions remain with the photographer. Cull will never deletes or modify original files.
 
 ## Features
 
