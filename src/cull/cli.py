@@ -17,92 +17,29 @@ def main():
 
     if args.command == "sort":
         print(f"Sorting {args.folder}...")
-        pathreject = args.folder + "/" + "Rejects"
-        pathpng = args.folder + "/" + "png"
-        pathjpg = args.folder + "/" + "jpg" 
-        pathjpeg = args.folder + "/" + "jpeg"
-        pathgif = args.folder + "/" + "gif"
-        pathbmp = args.folder + "/" + "bmp" 
-        pathtiff = args.folder + "/" + "tiff"
-        pathtif = args.folder + "/" + "tif"
-        pathwebp = args.folder + "/" + "webp" 
-        pathavif = args.folder + "/" + "avif"
-        pathheic = args.folder + "/" + "heic" 
-
-
-
-        if not os.path.exists(pathpng):
-            os.mkdir(pathpng)
-        if not os.path.exists(pathjpg):
-            os.mkdir(pathjpg)
-        if not os.path.exists(pathreject):
-            os.mkdir(pathreject)
-        if not os.path.exists(pathjpeg):
-            os.mkdir(pathjpeg)
-        if not os.path.exists(pathgif):
-            os.mkdir(pathgif)
-        if not os.path.exists(pathbmp):
-            os.mkdir(pathbmp)
-        if not os.path.exists(pathtiff):
-            os.mkdir(pathtiff)
-        if not os.path.exists(pathtif):
-            os.mkdir(pathtif)
-        if not os.path.exists(pathwebp):
-            os.mkdir(pathwebp)
-        if not os.path.exists(pathavif):
-            os.mkdir(pathavif)
-        if not os.path.exists(pathheic):
-            os.mkdir(pathheic)
-
-
-
-
-
-
-
-
-
-
-
-
+        
+        extensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "avif", "heic"]
+        
+        for ext in extensions:
+            os.makedirs(os.path.join(args.folder, ext), exist_ok=True)
+        pathreject = os.path.join(args.folder, "Rejects")
+        os.makedirs(pathreject, exist_ok=True)
 
         for file in os.listdir(args.folder):
-            root, extension = os.path.splitext(file)   
-            
-            if extension == ".png":
-                png = args.folder + file
-                dest = shutil.move(png, pathpng)
-            elif extension == ".jpg":
-                jpg = args.folder + file
-                dest1 = shutil.move(jpg, pathjpg)
-            elif extension == ".jpeg":
-                png = args.folder + file
-                dest = shutil.move(png, pathjpeg)
-            elif extension == ".gif":
-                jpg = args.folder + file
-                dest1 = shutil.move(jpg, pathgif)
-            elif extension == ".bmp":
-                png = args.folder + file
-                dest = shutil.move(png, pathbmp)
-            elif extension == ".tiff":
-                jpg = args.folder + file
-                dest1 = shutil.move(jpg, pathtiff)
-            elif extension == ".tif":
-                png = args.folder + file
-                dest = shutil.move(png, pathtif)
-            elif extension == ".webp":
-                jpg = args.folder + file
-                dest1 = shutil.move(jpg, pathwebp)
-            elif extension == ".avif":
-                png = args.folder + file
-                dest = shutil.move(png, pathavif)
-            elif extension == ".heic":
-                jpg = args.folder + file
-                dest1 = shutil.move(jpg, pathheic)
+            src = os.path.join(args.folder, file)
 
+            if not os.path.isfile(src):
+                continue
 
+            root, extension = os.path.splitext(file)
+            ext = extension.lower().lstrip(".")
+        
+            if ext in extension:
+                dest = os.path.join(args.folder, ext)
+            else:
+                dest = pathreject
 
-
+            shutil.move(src, dest)
 
 
     elif args.command == "scan":
