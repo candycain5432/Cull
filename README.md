@@ -3,7 +3,7 @@
 **A photo culling assistant that finds blurry, poorly exposed, and duplicate shots so photographers can focus on choosing the best ones.**
 
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 <!-- Demo GIF goes here once the review UI is available -->
