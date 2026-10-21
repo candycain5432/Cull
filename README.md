@@ -53,14 +53,23 @@ Analysis results are cached in a local SQLite database, so reopening a previousl
 pipx install cull
 ```
 
-**From source:**
+**With uv (recommended):**
 
 ```bash
-git clone https://github.com/<username>/cull.git
+git clone https://github.com/candycain5432/Cull.git
 cd cull
+uv tool install .
+
+```
+
+**With pip:**
+
+```bash
+git clone https://github.com/candycain5432/Cull.git
+cd Cull
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install .
 ```
 
 ### Requirements
