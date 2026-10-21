@@ -19,7 +19,7 @@ Oct 19, 2026 · @William Cain
 
 - [x] Scan a folder for JPEGs and RAW files
 - [x] Add a sort command to sort by image type
-- [ ] Read EXIF data (timestamp, shutter, ISO, aperture)
+- [x] Read EXIF data (timestamp, shutter, ISO, aperture)
 - [ ] Pull the embedded JPEG previews out of RAW files
 - [ ] Downscale images for analysis
 
