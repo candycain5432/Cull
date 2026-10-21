@@ -2,6 +2,11 @@
 import argparse
 import os
 import shutil
+from pathlib import Path
+from PIL import Image, UnidentifiedImageError
+from PIL.ExifTags import TAGS
+from colorama import Fore, Back,Style
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 
 # Main function
 def main():
@@ -48,7 +53,7 @@ def main():
             ext = extension.lower().lstrip(".") # Fixes cace sensitivity
         
             # Choses the destination
-            if ext in extension:
+            if ext in extensions:
                 dest = os.path.join(args.folder, ext)
             else:
                 dest = pathreject
@@ -59,14 +64,46 @@ def main():
 
     
 
-    # Scans folders (Doesn't do anything yet)
+    # Scans folders and prints EXIF data
     elif args.command == "scan":
         print(f"Scanning {args.folder}...")
+        folder = Path(args.folder) # Turns string into path       
         
-        for file in os.listdir(args.folder):
-            root, extension = os.path.splitext(file)   
+        # Counters for the summary at the end
+        scanned = skipped_ext = skipped_bad = 0
+        
+        for file in folder.rglob("*"): # Recursive Scan
+            if not file.is_file(): # Skips folders we want files
+                continue
+
+            # Skips anything that is not a image (from list)
+            if file.suffix.lower() not in IMAGE_EXTS:
+                skipped_ext += 1
+                continue
             
-            if extension == ".jpg":
-                print(f"Found image file {file}")
+            # Prints file name in a green header
+            print(Fore.GREEN + f"\n === {file.name} ===" + Style.RESET_ALL)
+
+            try:
+
+                with Image.open(file) as image: # "with" closes the file automaticlly
+                    exifdata = image.getexif() # Reads EXIF data
+
+                    for tag_id, data in exifdata.items():
+                        tag = TAGS.get(tag_id, tag_id) # Turns the tag number into a name
+                       
+                       # Raw bytes to text
+                        if isinstance(data, bytes):
+                            data = data.decode(errors="replace") # Avoides error
+                        
+                        print(f"{tag!s:25}: {data}") # Makes colons line up
+                scanned += 1
+            
+            # Corrupt, empty or fake image files end up here
+            except (UnidentifiedImageError, OSError) as e:
+                print(f"Skipping {file.name}: {e}")
+                skipped_bad += 1
+        # Summary
+        print(f"\n{scanned} scanned, {skipped_bad} unreadable, {skipped_ext} ignored by extension") 
     else:
         parser.print_help()
