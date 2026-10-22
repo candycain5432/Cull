@@ -9,7 +9,9 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "colorama>=0.4.6",
+    "imageio>=2.38.1",
     "pillow>=13.0.0",
+    "rawpy>=0.27.1",
 ]
 
 [project.scripts]

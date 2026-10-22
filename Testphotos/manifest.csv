@@ -1,0 +1,26 @@
+SourceFile,FileType,Make,Model,LensModel,DateTimeOriginal,ISO,FNumber,ExposureTime,FocalLength,Orientation,GPSPosition,PreviewImageLength,JpgFromRawLength,ThumbnailLength,ImageSize
+./broken/actually_a_jpeg.cr2,JPEG,DJI,FC3582,DJI Mini 4 Pro 6.7mm f/1.7,2022:05:20 18:50:05,200,1.8,1/250,6.7 mm,Horizontal (normal),"33 deg 55' 26.33"" S, 18 deg 25' 54.75"" E",,,,900x600
+./broken/truncated_early.CR2,CR2,Canon,Canon EOS 40D,EF-S17-85mm f/4-5.6 IS USM,2007:09:14 11:32:02,100,4.0,1/200,17.0 mm,Horizontal (normal),,481778,,12195,1936x1288
+./broken/actually_a_tiff.dng,DNG,Canon,Canon EOS R6,RF24-105mm F4 L IS USM,2020:04:23 10:33:46,3200,1.8,4,70.0 mm,Horizontal (normal),"33 deg 55' 51.74"" S, 18 deg 25' 16.99"" E",,,,900x600
+./broken/truncated_halfway.NEF,NEF,NIKON CORPORATION,NIKON D3S,,2012:03:04 17:20:59,3200,1.4,0.6,28.0 mm,Horizontal (normal),,87245,855182,,4288x2844
+./broken/text_file.arw,TXT,,,,,,,,,,,,,,
+./broken/empty_zero_bytes.nef,,,,,,,,,,,,,,,
+./full_raws/iss030e122639.NEF,NEF,NIKON CORPORATION,NIKON D3S,,2012:03:04 17:20:59,3200,1.4,0.6,28.0 mm,Horizontal (normal),,87245,855182,,4288x2844
+./full_raws/iss042e297200.NEF,NEF,NIKON CORPORATION,NIKON D4,,2015:02:28 20:51:19,6400,1.4,1/5,28.0 mm,Horizontal (normal),,93520,1520021,,4992x3292
+./full_raws/RAW_KODAK_DC50_é.KDC,KDC,Eastman Kodak Company,Kodak Digital Science DC50 Zoom Camera,,,,6.2,1/230,37.0 mm,Horizontal (normal),,,,,756x504
+./full_raws/RAW_CANON_5DMARK2_PREPROD.CR2,CR2,Canon,Canon EOS 5D Mark II,EF50mm f/1.2L USM,2008:10:29 20:05:00,3200,1.2,1/20,50.0 mm,Horizontal (normal),,2370736,,13788,5616x3744
+./full_raws/RAW_SIGMA_SD9_SRGB.X3F,X3F,SIGMA,SIGMA SD9,,2003:04:12 12:40:05,100,5.2,,53.0 mm,,,,,,2268x1512
+./full_raws/RAW_CANON_40D_SRAW_V103.CR2,CR2,Canon,Canon EOS 40D,EF-S17-85mm f/4-5.6 IS USM,2007:09:14 11:32:02,100,4.0,1/200,17.0 mm,Horizontal (normal),,481778,,12195,1936x1288
+./full_raws/M0054341_01_00005.cr2,CR2,Canon,Canon EOS DIGITAL REBEL XTi,EF-S18-55mm f/3.5-5.6,2009:05:20 02:22:05,100,10.0,1,48.0 mm,Rotate 180,,537989,,6442,3888x2592
+./stripped_metadata_only/DNG.dng,DNG,Canon,Canon EOS 350D DIGITAL,,2005:08:03 18:59:18,400,8.0,1/15,55.0 mm,Horizontal (normal),,26,29,,3516x2328
+./stripped_metadata_only/CanonRaw.cr3,CR3,Canon,Canon EOS M50,EF-M15-45mm f/3.5-6.3 IS STM,2018:02:21 12:08:56,12800,3.5,1/80,15.0 mm,Horizontal (normal),,,,,6000x4000
+./stripped_metadata_only/CanonRaw.crw,CRW,Canon,Canon EOS DIGITAL REBEL,,2003:11:10 17:39:26,100,3.6,1/64,24 mm,,,,,,3072x2048
+./stripped_metadata_only/FujiFilm.raf,RAF,FUJIFILM,FinePix S5Pro,,2007:05:22 13:58:30,100,8.0,1/250,70.0 mm,Horizontal (normal),,,,9362,4256x1424
+./stripped_metadata_only/PhaseOne.iiq,IIQ,Leaf,Credo 40,Mamiya LS 80mm f/2.8 D,2013:06:19 15:44:21,100,5.6,1/1250,80.0 mm,,,,,,7320x5484
+./stripped_metadata_only/CanonRaw.cr2,CR2,Canon,Canon EOS 350D DIGITAL,,2005:08:03 18:59:18,400,8.0,1/15,55.0 mm,Horizontal (normal),,26,,28,3456x2304
+./stripped_metadata_only/Minolta.mrw,MRW,"Konica Minolta Camera, Inc.",DiMAGE A2,,2004:11:18 23:14:58,64,2.8,1/5,7.2 mm,Horizontal (normal),,26,,,3264x2448
+./stripped_metadata_only/Nikon.nef,NEF,NIKON CORPORATION,NIKON D70,,2004:06:09 16:02:35,200,3.5,1/20,18.0 mm,Horizontal (normal),,26,29,,3040x2014
+./stripped_metadata_only/SigmaDP2.x3f,X3F,SIGMA,SIGMA DP2,,2009:11:28 13:05:20,100,2.8,1/10,24.2 mm,Horizontal (normal),,26,,28,8x8
+./stripped_metadata_only/Panasonic.rw2,RW2,Panasonic,DMC-LX3,,2008:08:06 15:21:56,80,4.0,1/250,5.1 mm,Horizontal (normal),,,,28,3648x2736
+./stripped_metadata_only/Sigma.x3f,X3F,SIGMA,SIGMA SD10,,2001:01:01 00:36:35,100,8.4,1/108,30.0 mm,,,,,,2268x1512
+./manifest.csv,,,,,,,,,,,,,,,

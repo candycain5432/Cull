@@ -6,6 +6,11 @@ from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 from PIL.ExifTags import TAGS
 from colorama import Fore, Back,Style
+import io
+import rawpy
+
+RAW_EXTS = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"}
+
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 
 # Main function
@@ -31,7 +36,7 @@ def main():
     if args.command == "sort":
         print(f"Sorting {args.folder}...")
         
-        extensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "avif", "heic"] # List for allowed file types (There will be a option to add to this in the cli)
+        extensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "avif", "heic", "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "raf"] # List for allowed file types (There will be a option to add to this in the cli)
         
         # Creates folder inside target folder for each file type in list
         for ext in extensions:
@@ -66,6 +71,17 @@ def main():
 
     # Scans folders and prints EXIF data
     elif args.command == "scan":
+        def read_exif(file):
+            if file.suffix.lower() in RAW_EXTS:
+                with rawpy.imread(str(file)) as raw:
+                    thumb = raw.extract_thumb()
+                if thumb.format != rawpy.ThumbFormat.JPEG:
+                    raise OSError("Raw thumbnail is not a JEPG, no EXIF avail")
+                return Image.open(io.BytesIO(thumb.data)).getexif()
+            with Image.open(file) as image:
+                return image.getexif()
+
+
         print(f"Scanning {args.folder}...")
         folder = Path(args.folder) # Turns string into path       
         
@@ -77,7 +93,7 @@ def main():
                 continue
 
             # Skips anything that is not a image (from list)
-            if file.suffix.lower() not in IMAGE_EXTS:
+            if file.suffix.lower() not in IMAGE_EXTS | RAW_EXTS:
                 skipped_ext += 1
                 continue
             
@@ -86,24 +102,25 @@ def main():
 
             try:
 
-                with Image.open(file) as image: # "with" closes the file automaticlly
-                    exifdata = image.getexif() # Reads EXIF data
+                exifdata = read_exif(file)
+                for tag_id, data in exifdata.items():
+                    tag = TAGS.get(tag_id, tag_id)
 
-                    for tag_id, data in exifdata.items():
-                        tag = TAGS.get(tag_id, tag_id) # Turns the tag number into a name
-                       
-                       # Raw bytes to text
-                        if isinstance(data, bytes):
-                            data = data.decode(errors="replace") # Avoides error
-                        
-                        print(f"{tag!s:25}: {data}") # Makes colons line up
+                    if isinstance(data, bytes):
+                        data = data.decode(errors="replace")
+
+                    print(f"{tag!s:25}: {data}")
                 scanned += 1
             
             # Corrupt, empty or fake image files end up here
-            except (UnidentifiedImageError, OSError) as e:
+            except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
                 print(f"Skipping {file.name}: {e}")
                 skipped_bad += 1
+        
         # Summary
         print(f"\n{scanned} scanned, {skipped_bad} unreadable, {skipped_ext} ignored by extension") 
+        
+
+
     else:
         parser.print_help()
