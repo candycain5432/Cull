@@ -4,7 +4,7 @@ import os
 import shutil
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
-from PIL.ExifTags import TAGS
+from PIL.ExifTags import TAGS, GPSTAGS, IFD
 from colorama import Fore, Back,Style
 import io
 import rawpy
@@ -77,9 +77,21 @@ def main():
                     thumb = raw.extract_thumb()
                 if thumb.format != rawpy.ThumbFormat.JPEG:
                     raise OSError("Raw thumbnail is not a JEPG, no EXIF avail")
-                return Image.open(io.BytesIO(thumb.data)).getexif()
+                with Image.open(io.BytesIO(thumb.data)) as image:
+                    return collect_exif(image.getexif())
             with Image.open(file) as image:
-                return image.getexif()
+                return collect_exif(image.getexif())
+
+        def collect_exif(exif):
+            out = {}
+            for tag_id, value in exif.items():
+                out[TAGS.get(tag_id, tag_id)] = value
+            for tag_id, value in exif.get_ifd(IFD.Exif).items():
+                out[TAGS.get(tag_id, tag_id)] = value
+            for tag_id, value in exif.get_ifd(IFD.GPSInfo).items():
+                out[GPSTAGS.get(tag_id, tag_id)] = value
+            return out
+
 
 
         print(f"Scanning {args.folder}...")
@@ -103,13 +115,20 @@ def main():
             try:
 
                 exifdata = read_exif(file)
-                for tag_id, data in exifdata.items():
-                    tag = TAGS.get(tag_id, tag_id)
-
+                for tag, data in exifdata.items():
+                    if tag in ("ExifOffset", "GPSInfo"):
+                        continue
                     if isinstance(data, bytes):
-                        data = data.decode(errors="replace")
+                        try:
+                            text = data.decode("utf-8")
+                        except UnicodeDecodeError:
+                            text = None
+                        data = text if text and text.isprintable() else f"<{len(data)} bytes>"
+
+
 
                     print(f"{tag!s:25}: {data}")
+
                 scanned += 1
             
             # Corrupt, empty or fake image files end up here

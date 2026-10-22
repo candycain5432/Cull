@@ -20,8 +20,8 @@ Oct 19, 2026 · @William Cain
 - [x] Scan a folder for JPEGs and RAW files
 - [x] Add a sort command to sort by image type
 - [x] Read EXIF data (timestamp, shutter, ISO, aperture)
-- [ ] Pull the embedded JPEG previews out of RAW files
-- [ ] Downscale images for analysis
+- [x] Pull the embedded JPEG previews out of RAW files
+- [x] Downscale images for analysis (Skipped until needed)
 
 **Done when:** `cull scan ./shoot` lists every photo with its settings.
 
