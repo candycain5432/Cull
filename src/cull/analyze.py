@@ -1,6 +1,7 @@
 # Opens each photo once, measures everything, and remembers the results
 import io
 import warnings
+from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import datetime
 from fnmatch import fnmatch
@@ -37,6 +38,11 @@ class Photo:
     @cached_property
     def when(self):
         return datetime.fromisoformat(self.taken) if self.taken else None
+
+
+# Sharpness is relative, so it's shown as the % of this shoot a photo beats
+def beats(comparable, photo):
+    return bisect_left(comparable, photo.sharpness) / max(1, len(comparable) - 1) * 100
 
 
 # Pillow warns at this many pixels and refuses at double, so half of the setting is the real limit

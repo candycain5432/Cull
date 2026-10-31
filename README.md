@@ -25,6 +25,7 @@ All final decisions remain with the photographer. Cull never deletes or edits a 
 | Burst grouping | Groups related shots by capture time and visual similarity |
 | Duplicate detection | Finds copies with perceptual hashing, even if they were resized, rotated, or lost their EXIF data |
 | Suggested picks | Picks the best frame in each group and explains every decision |
+| Review screen | Pick and reject photos in your browser using only the keyboard, with a grid of groups and a side-by-side compare view |
 | Group folders | Lays the groups out as folders without moving your originals |
 | RAW support | Reads CR2, CR3, NEF, ARW, DNG, ORF, RW2, and RAF files through their embedded previews |
 | Instant repeat runs | Results are cached in SQLite, so a second run doesn't reopen any photos |
@@ -60,12 +61,14 @@ pip install .
 ### Requirements
 
 - Python 3.12 or newer
+- A web browser, for `cull review`
 - Developed and tested on Linux. macOS and Windows should work but haven't been tested yet.
 
 ## Usage
 
 | Command | What it does |
 | --- | --- |
+| `cull review ./shoot` | Opens the review screen, see [Reviewing a shoot](#reviewing-a-shoot) |
 | `cull group ./shoot` | Groups similar shots, suggests the best of each, and writes the group folders |
 | `cull score ./shoot` | Shows every score for every photo |
 | `cull sharpness ./shoot` | Ranks photos from sharpest to blurriest |
@@ -109,6 +112,42 @@ If a drive can't do hard links, Cull makes normal copies instead. To choose your
 
 Sending a report to a file or another program gives plain columns with no colors or borders, so `cull score ./shoot > scores.txt` is easy to search. Cull also follows the `NO_COLOR` environment variable.
 
+## Reviewing a shoot
+
+`cull review` is where you make the final call. It scores and groups the shoot, then opens a grid of every group in your browser with the suggested frame highlighted. Press Ctrl+C in the terminal when you're done.
+
+```bash
+cull review ./shoot                # Opens your browser
+cull review ./shoot --no-browser   # Only prints the address
+cull review ./shoot --port 8000    # Uses a fixed port
+```
+
+Everything can be done from the keyboard:
+
+| Key | Grid | Open photo | Compare |
+| --- | --- | --- | --- |
+| Arrow keys | Move | Previous or next photo | Change the right photo |
+| `P` / `X` | Pick / reject | Pick / reject | Pick / reject the right photo |
+| `U` | Clear the decision | Clear the decision | Clear the right photo |
+| `A` | Accept the group | Accept the group | Pick the left photo, reject the rest |
+| `Tab` / `Shift+Tab` | Next / previous group | Next / previous group | Next / previous group |
+| `N` | Next undecided photo | Next undecided photo | Next undecided photo |
+| `Enter` | Open the photo | Back to the grid | Back to the grid |
+| `C` | Compare | Compare | Back to one photo |
+| `S` | | | Move the right photo to the left |
+| `Z` | | Zoom to 100% | Zoom to 100% |
+| `Shift` + arrow keys | | Pan | Pan both photos |
+| `Esc` | | Back to the grid | Back to the grid |
+| `Ctrl+Z` | Undo | Undo | Undo |
+
+Pressing `P` or `X` a second time takes the decision back. `A` is the fast path through a shoot: it picks the suggested frame and rejects everything else in the group, but it never changes a decision you've already made. It doesn't work on the "No similar shots" section, because those photos have nothing in common.
+
+To choose between frames by hand, press `C`. The suggested frame starts on the left, and the arrow keys change the photo on the right. When the right one is better, press `S` to move it to the left, then press `A` to keep whichever photo finished on the left.
+
+Decisions save as you make them, to a file beside the shoot called `shoot_review.json`, so you can stop and carry on later. Rejecting a photo only records the decision, nothing is moved or deleted. Other photo apps can't read this file yet, that comes with XMP export in v0.4.
+
+The review screen is only reachable from your own computer.
+
 ## Configuration
 
 Colors, progress bars, scoring thresholds, grouping rules, folder names, and file types can all be changed without touching the code.
@@ -149,6 +188,7 @@ ignore = ["*_edit.jpg", "Rejects"]
 | `[grouping]` | Burst and retake time gaps, and how alike two photos have to be |
 | `[picks]` | How much extra clipping rules out a frame, and what counts as a tie |
 | `[folders]` | Output folder names, the pick marker, and hard links, symlinks, or copies |
+| `[review]` | Port, opening the browser, moving on after a decision, thumbnail size, and the decisions file name |
 | `[files]` | File types, subfolders, hidden files, and names to ignore |
 | `[sort]` | The folders `cull sort` creates |
 | `[scan]` | EXIF tags to hide, including location data |
@@ -196,7 +236,11 @@ src/cull/
 ├── grouping.py     Burst, retake, and duplicate clustering
 ├── picks.py        Suggested picks and the reasons for them
 ├── folders.py      Group folder output
-└── cache.py        SQLite cache
+├── cache.py        SQLite cache
+├── review.py       What the review screen shows, and saving decisions
+├── previews.py     Turns photos into images a browser can show
+├── server.py       Local web server for the review screen
+└── web/            The review screen itself
 ```
 
 ## Tech Stack
@@ -207,6 +251,7 @@ src/cull/
 | RAW files | rawpy |
 | Storage | SQLite |
 | Terminal output | Rich |
+| Review screen | FastAPI, Uvicorn, plain JavaScript |
 | Packaging | uv |
 
 ## Roadmap
@@ -220,9 +265,9 @@ src/cull/
 - [x] Command-line report
 
 ### v0.2 – Review interface
-- [ ] Grid view of grouped images
-- [ ] Keyboard pick/reject controls
-- [ ] Side-by-side compare view
+- [x] Grid view of grouped images
+- [x] Keyboard pick/reject controls
+- [x] Side-by-side compare view
 
 ### v0.3 – Smarter analysis
 - [ ] Face detection

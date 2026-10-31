@@ -11,13 +11,13 @@ from importlib.metadata import version
 import io
 import sys
 import rawpy
-from bisect import bisect_left
 from rich.text import Text
-from cull.analyze import UNREADABLE, analyze_folder, find_files, set_pixel_limit
+from cull.analyze import UNREADABLE, analyze_folder, beats, find_files, set_pixel_limit
 from cull.config import ConfigError, defaults, find_config, load, write_default
 from cull.folders import output_folder, write_folders
 from cull.grouping import group_photos
 from cull.picks import choose
+from cull.review import Decisions, ReviewError, build_shoot, review_file
 from cull.themes import THEMES
 from cull.ui import Ui
 
@@ -35,10 +35,6 @@ def read_photos(folder, config, ui):
 def print_summary(ui, photos, skipped_bad, skipped_ext, fresh, first=(), note=None):
     ui.summary([*first, f"{len(photos)} scored", f"{skipped_bad} unreadable", f"{skipped_ext} ignored by extension",
                 f"{fresh} newly analyzed"], note)
-
-# Sharpness is relative, so it's shown as the % of this shoot a photo beats
-def beats(comparable, photo):
-    return bisect_left(comparable, photo.sharpness) / max(1, len(comparable) - 1) * 100
 
 # Shows how Cull is set up right now
 def show_config(config, ui):
@@ -108,6 +104,7 @@ def run():
     expose = sub.add_parser("exposure", parents=[common], help="Rank photos from best to worst exposed") # Adds <exposure> command
     score = sub.add_parser("score", parents=[common], help="Show every score for every photo") # Adds <score> command
     grouper = sub.add_parser("group", parents=[common], help="Group similar shots and suggest the best of each") # Adds <group> command
+    reviewer = sub.add_parser("review", parents=[common], help="Pick and reject photos in your browser") # Adds <review> command
     configure = sub.add_parser("config", parents=[common], help="Show or create the config file") # Adds <config> command
     sorter.add_argument("folder", help="path to the shoot")
     scan.add_argument("folder", help="Path to the shoot")
@@ -115,6 +112,9 @@ def run():
     expose.add_argument("folder", help="Path to the shoot")
     score.add_argument("folder", help="Path to the shoot")
     grouper.add_argument("folder", help="Path to the shoot")
+    reviewer.add_argument("folder", help="Path to the shoot")
+    reviewer.add_argument("--port", type=int, help="Port to use, 0 finds a free one")
+    reviewer.add_argument("--no-browser", action="store_true", help="Print the address without opening a browser")
     configure.add_argument("action", nargs="?", default="show", choices=["show", "init", "path", "themes"],
                            help="show the settings, init a config file, print its path, or preview the themes")
 
@@ -461,6 +461,38 @@ def run():
                     ui.warn(f"Couldn't write the folders: {e}")
 
         print_summary(ui, photos, skipped_bad, skipped_ext, fresh, [f"{len(groups)} groups", f"{len(singles)} singles"], note)
+
+
+
+    # Opens the review screen, the photographer makes the final call there
+    elif args.command == "review":
+        from cull.server import create_app, listen, serve # Slow to import, the other commands shouldn't wait for it
+
+        ui.title("Reviewing", args.folder)
+        photos, skipped_bad, skipped_ext, fresh = read_photos(args.folder, config, ui)
+        if not photos:
+            return
+
+        with ui.working("Grouping photos"):
+            shoot = build_shoot(Path(args.folder), photos, config)
+
+        try:
+            decisions = Decisions(review_file(Path(args.folder), config.review))
+            sock, url = listen(config.review.port if args.port is None else args.port)
+        except ReviewError as e:
+            parser.exit(2, f"cull: {e}\n")
+        except (OSError, OverflowError) as e: # Port taken, or not a real port number
+            parser.exit(2, f"cull: Couldn't start the server: {e}\n")
+
+        groups = sum(section["suggested"] is not None for section in shoot.sections)
+        print_summary(ui, photos, skipped_bad, skipped_ext, fresh, [f"{groups} groups"],
+                      f"Review screen at {url}, press Ctrl+C here when you're done")
+        serve(create_app(shoot, decisions, config), sock, url, config.review.open_browser and not args.no_browser)
+
+        made = decisions.count(shoot.names)
+        undecided = len(shoot.names) - made.total()
+        ui.summary([f"{made['pick']} picks", f"{made['reject']} rejects", f"{undecided} undecided"],
+                   f"Decisions saved to {decisions.path}" if made else None)
 
 
 

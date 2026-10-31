@@ -4,6 +4,11 @@
 
 ### Added
 
+- `cull review` opens a review screen in your browser, with a grid of groups and the suggested pick highlighted
+- Keyboard controls for the whole review: P to pick, X to reject, arrow keys to move, and A to accept a group in one key
+- Side-by-side compare view with 100% zoom, and both sides pan to the same spot
+- Review decisions save as they're made to a file beside the shoot, so a review can be stopped and carried on later
+- A `[review]` section in the config, and `--port` and `--no-browser` on `cull review`
 - Color reports with tables, score bars, and a totals panel
 - Live progress bars with the time left, speed, and current file, for analyzing, sorting, and writing group folders
 - Five color themes: default, ocean, sunset, colorblind, and mono

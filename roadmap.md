@@ -52,10 +52,10 @@ Oct 19, 2026 · @William Cain
 
 **Goal:** humans make the final call.
 
-- [ ] Local web UI (FastAPI plus a browser frontend)
-- [ ] Grid of groups with the suggested pick highlighted
-- [ ] Keyboard controls: P = pick, X = reject, arrow keys to move
-- [ ] Side-by-side compare view
+- [x] Local web UI (FastAPI plus a browser frontend)
+- [x] Grid of groups with the suggested pick highlighted
+- [x] Keyboard controls: P = pick, X = reject, arrow keys to move
+- [x] Side-by-side compare view
 
 **Done when:** you can cull a full shoot without touching the mouse.
 

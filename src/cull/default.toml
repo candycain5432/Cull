@@ -91,6 +91,14 @@ number_width = 3        # Digits in the group number, 3 gives 001_burst
 link = "hardlink"       # hardlink, symlink or copy, a link that fails becomes a copy
 
 
+[review]
+port = 0                # 0 finds a free port on every run
+open_browser = true     # Opens the review screen when cull review starts
+auto_advance = true     # P and X move on to the next photo
+thumbnail = 512         # Pixels, the long edge of the photos in the grid
+suffix = "_review.json" # Added to the shoot's name to name the file that holds your decisions
+
+
 [files]
 image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
 raw_extensions = [".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"]

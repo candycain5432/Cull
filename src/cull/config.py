@@ -44,11 +44,13 @@ RANGES = {
     "picks.clip_margin": (0, 100),
     "picks.same_sharpness": (0, 100),
     "folders.number_width": (1, 9),
+    "review.port": (0, 65_535),
+    "review.thumbnail": (64, 2048),
 }
 
 # These become part of a path, so "../photos" must not walk out of the shoot
 NAMES = {"folders.singles_folder", "sort.rejects_folder"}
-NAME_PARTS = {"folders.suffix", "folders.pick_prefix"} # Added to a name, so these can't be a path either
+NAME_PARTS = {"folders.suffix", "folders.pick_prefix", "review.suffix"} # Added to a name, so these can't be a path either
 EXTENSIONS = {"files.image_extensions", "files.raw_extensions", "sort.extensions"}
 
 
@@ -118,6 +120,8 @@ def check_value(key, default, value):
         return f"{key} can't contain a path, {value!r} isn't allowed"
     if key == "folders.suffix" and not value:
         return f"{key} can't be empty, the output folder would be the shoot itself"
+    if key == "review.suffix" and not value:
+        return f"{key} can't be empty, the decisions file would have the same name as the shoot"
     if key == "cache.folder" and not value:
         return f"{key} can't be empty"
     if key in EXTENSIONS:

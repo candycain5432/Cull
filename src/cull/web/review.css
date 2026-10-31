@@ -1,0 +1,136 @@
+/* Neutral greys on purpose, a colored background changes how the colors of a photo look */
+:root {
+  color-scheme: dark;
+  --ground: #2b2b2b;
+  --panel: #1e1e1e;
+  --line: #414141;
+  --text: #e8e8e8;
+  --muted: #a6a6a6;
+  --focus: #ffffff;
+  --pick: #4cc38a;
+  --reject: #ff7b72;
+  --suggested: #f2c14e;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--text);
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+header, footer { background: var(--panel); padding: .5rem 1rem; }
+
+header { display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--line); }
+header strong { font-size: 1rem; }
+#shoot { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#meter { flex: 1 1 8rem; min-width: 4rem; max-width: 24rem; height: 6px; border-radius: 3px; background: var(--line); }
+#meter div { width: 0; height: 100%; border-radius: 3px; background: var(--pick); }
+#progress { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#status { margin-left: auto; color: var(--muted); white-space: nowrap; }
+#status.error { color: var(--reject); font-weight: 600; white-space: normal; }
+
+/* The grid stays behind the viewer, so it keeps its scroll position */
+main, #viewer { grid-row: 2; grid-column: 1; min-height: 0; }
+
+main { overflow-y: auto; padding: 0 1rem 1rem; }
+
+.group h2 {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 -1rem;
+  padding: .75rem 1rem .5rem;
+  background: var(--ground);
+  font-size: .9rem;
+  font-weight: 600;
+}
+.group h2 span { margin-left: .5rem; color: var(--muted); font-weight: 400; }
+.group.done h2 span { color: var(--pick); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .6rem; }
+
+.tile {
+  position: relative;
+  scroll-margin: 3rem 0 .75rem;
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+  user-select: none;
+}
+.tile img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: contain; }
+/* Right to left so a long name loses its start, the end is the part that tells two photos apart */
+.tile p { margin: 0; padding: .2rem .4rem; overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+
+/* Above the group headings, they'd cover the top and bottom of the ring otherwise */
+.tile.suggested { box-shadow: 0 0 0 2px var(--suggested); }
+.tile.focus { z-index: 3; outline: 3px solid var(--focus); outline-offset: 2px; }
+.tile.reject img { opacity: .3; }
+.tile.missing img { visibility: hidden; }
+.tile.missing::after { content: "Can't load this photo"; position: absolute; top: 40%; left: 0; right: 0; color: var(--muted); text-align: center; }
+
+.mark, .star {
+  position: absolute;
+  top: .35rem;
+  padding: .05rem .4rem;
+  border-radius: 3px;
+  color: #111;
+  font-size: .7rem;
+  font-weight: 700;
+}
+.mark { left: .35rem; }
+.star { right: .35rem; background: var(--suggested); }
+.mark:empty, .star:empty { display: none; }
+.pick .mark { background: var(--pick); }
+.reject .mark { background: var(--reject); }
+
+#viewer {
+  z-index: 5;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: .5rem;
+  padding: .5rem;
+  background: var(--panel);
+}
+#viewer[hidden], .pane[hidden] { display: none; }
+
+.pane { position: relative; min-width: 0; margin: 0; overflow: hidden; background: #161616; }
+.pane img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+.pane img.actual { object-fit: fill; }
+.pane figcaption {
+  position: absolute;
+  left: .5rem;
+  bottom: .5rem;
+  max-width: calc(100% - 1rem);
+  padding: .15rem .5rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgb(0 0 0 / .7);
+  font-size: .8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pane.pick figcaption { color: var(--pick); }
+.pane.reject figcaption { color: var(--reject); }
+
+footer { border-top: 1px solid var(--line); }
+#details { display: flex; flex-wrap: wrap; gap: 0 1rem; min-height: 1.4em; }
+#name { font-weight: 600; }
+#scores { color: var(--muted); font-variant-numeric: tabular-nums; }
+#reason { color: var(--suggested); }
+#keys { display: flex; flex-wrap: wrap; gap: .1rem .9rem; margin-top: .25rem; color: var(--muted); font-size: .75rem; }
+kbd {
+  padding: 0 .3rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--ground);
+  color: var(--text);
+  font: inherit;
+}
