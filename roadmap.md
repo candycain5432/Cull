@@ -29,7 +29,7 @@ Oct 19, 2026 · @William Cain
 
 **Goal:** score each photo's quality.
 
-- [ ] Sharpness (variance of the Laplacian)
+- [x] Sharpness (variance of the Laplacian)
 - [ ] Exposure (histogram clipping)
 - [ ] Save the results to a SQLite cache
 

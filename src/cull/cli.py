@@ -8,6 +8,7 @@ from PIL.ExifTags import TAGS, GPSTAGS, IFD
 from colorama import Fore, Back,Style
 import io
 import rawpy
+from cull.exposure import DARK, exposure
 from cull.sharpness import LONG_EDGE, sharpness
 
 RAW_EXTS = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"}
@@ -24,6 +25,30 @@ def open_image(file):
         return Image.open(io.BytesIO(thumb.data))
     return Image.fromarray(thumb.data) # Bitmap previews are already pixels
 
+# Runs measure on every photo in a folder, returns the (name, result) pairs and the skip counts
+def score_folder(folder, measure):
+    results = []
+    skipped_ext = skipped_bad = 0
+
+    for file in folder.rglob("*"):
+        if not file.is_file():
+            continue
+
+        if file.suffix.lower() not in IMAGE_EXTS | RAW_EXTS:
+            skipped_ext += 1
+            continue
+
+        try:
+            with open_image(file) as image:
+                results.append((str(file.relative_to(folder)), measure(image)))
+
+        # Corrupt, empty or fake image files end up here
+        except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
+            print(f"Skipping {file.name}: {e}")
+            skipped_bad += 1
+
+    return results, skipped_bad, skipped_ext
+
 # Main function
 def main():
     
@@ -34,9 +59,11 @@ def main():
     scan = sub.add_parser("scan", help="Analyze a folder of photos") # Adds <scan> command 
     sorter = sub.add_parser("sort", help="sort the photos into folders based on file extension") # Adds <sort> command
     sharp = sub.add_parser("sharpness", help="Rank photos from sharpest to blurriest") # Adds <sharpness> command
+    expose = sub.add_parser("exposure", help="Rank photos from best to worst exposed") # Adds <exposure> command
     sorter.add_argument("folder", help="path to the shoot")
     scan.add_argument("folder", help="Path to the shoot")
     sharp.add_argument("folder", help="Path to the shoot")
+    expose.add_argument("folder", help="Path to the shoot")
 
     args = parser.parse_args()
     
@@ -157,29 +184,11 @@ def main():
     # Ranks photos from sharpest to blurriest
     elif args.command == "sharpness":
         print(f"Scoring {args.folder}...")
-        folder = Path(args.folder)
+        results, skipped_bad, skipped_ext = score_folder(
+            Path(args.folder), lambda image: (sharpness(image), max(image.size) < LONG_EDGE))
 
-        ranked, too_small = [], [] # (score, name) pairs
-        skipped_ext = skipped_bad = 0
-
-        for file in folder.rglob("*"):
-            if not file.is_file():
-                continue
-
-            if file.suffix.lower() not in IMAGE_EXTS | RAW_EXTS:
-                skipped_ext += 1
-                continue
-
-            try:
-                with open_image(file) as image:
-                    score = sharpness(image)
-                    small = max(image.size) < LONG_EDGE
-                (too_small if small else ranked).append((score, str(file.relative_to(folder))))
-
-            # Corrupt, empty or fake image files end up here
-            except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
-                print(f"Skipping {file.name}: {e}")
-                skipped_bad += 1
+        ranked = [(score, name) for name, (score, small) in results if not small]
+        too_small = [(score, name) for name, (score, small) in results if small]
 
         print(Fore.GREEN + "\n === Sharpest to blurriest ===" + Style.RESET_ALL)
         for rank, (score, name) in enumerate(sorted(ranked, reverse=True), 1):
@@ -192,7 +201,35 @@ def main():
                 print(f"      {score:10.2f}  {name}")
 
         # Summary
-        print(f"\n{len(ranked) + len(too_small)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
+        print(f"\n{len(results)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
+
+
+
+    # Ranks photos from best to worst exposed
+    elif args.command == "exposure":
+        print(f"Scoring {args.folder}...")
+        results, skipped_bad, skipped_ext = score_folder(Path(args.folder), exposure)
+
+        ranked = [(blown + crushed, blown, crushed, shade, name) for name, (blown, crushed, shade) in results if shade >= DARK]
+        dark = [(blown + crushed, blown, crushed, shade, name) for name, (blown, crushed, shade) in results if shade < DARK]
+
+        def print_row(label, photo):
+            clipped, blown, crushed, shade, name = photo
+            print(f"{label:>5} {clipped:7.2f}% {blown:7.2f}% {crushed:8.2f}% {shade:6.0f}  {name}")
+
+        print(Fore.GREEN + "\n === Best to worst exposed ===" + Style.RESET_ALL)
+        print(f"{'':5} {'clipped':>8} {'blown':>8} {'crushed':>9} {'bright':>6}")
+        for rank, photo in enumerate(sorted(ranked), 1):
+            print_row(f"{rank}.", photo)
+
+        # Underexposed photos and real night scenes look the same, so these aren't ranked
+        if dark:
+            print(Fore.YELLOW + "\n === Very dark, could be underexposed or a night scene, check by eye ===" + Style.RESET_ALL)
+            for photo in sorted(dark, key=lambda photo: photo[3]):
+                print_row("", photo)
+
+        # Summary
+        print(f"\n{len(results)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
 
 
 

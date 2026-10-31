@@ -13,12 +13,12 @@ def to_gray(image):
 
 
 # Shrinks to LONG_EDGE, smaller images are left alone as upscaling would fake the score
-def downscale(gray):
-    scale = LONG_EDGE / max(gray.size)
+def downscale(image):
+    scale = LONG_EDGE / max(image.size)
     if scale >= 1:
-        return gray
-    size = (max(1, round(gray.width * scale)), max(1, round(gray.height * scale)))
-    return gray.resize(size, Image.Resampling.BOX) # BOX averages pixels like cv2.INTER_AREA
+        return image
+    size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+    return image.resize(size, Image.Resampling.BOX) # BOX averages pixels like cv2.INTER_AREA
 
 
 # Same result as cv2.Laplacian(gray, cv2.CV_64F), the border mirrors like OpenCV's default
