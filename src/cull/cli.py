@@ -8,10 +8,21 @@ from PIL.ExifTags import TAGS, GPSTAGS, IFD
 from colorama import Fore, Back,Style
 import io
 import rawpy
+from cull.sharpness import LONG_EDGE, sharpness
 
 RAW_EXTS = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"}
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
+
+# Opens a photo for analysis, RAWs use their embedded preview
+def open_image(file):
+    if file.suffix.lower() not in RAW_EXTS:
+        return Image.open(file)
+    with rawpy.imread(str(file)) as raw:
+        thumb = raw.extract_thumb()
+    if thumb.format == rawpy.ThumbFormat.JPEG:
+        return Image.open(io.BytesIO(thumb.data))
+    return Image.fromarray(thumb.data) # Bitmap previews are already pixels
 
 # Main function
 def main():
@@ -22,8 +33,10 @@ def main():
     
     scan = sub.add_parser("scan", help="Analyze a folder of photos") # Adds <scan> command 
     sorter = sub.add_parser("sort", help="sort the photos into folders based on file extension") # Adds <sort> command
-    sorter.add_argument("folder", help="path to the shoot") 
+    sharp = sub.add_parser("sharpness", help="Rank photos from sharpest to blurriest") # Adds <sharpness> command
+    sorter.add_argument("folder", help="path to the shoot")
     scan.add_argument("folder", help="Path to the shoot")
+    sharp.add_argument("folder", help="Path to the shoot")
 
     args = parser.parse_args()
     
@@ -137,8 +150,50 @@ def main():
                 skipped_bad += 1
         
         # Summary
-        print(f"\n{scanned} scanned, {skipped_bad} unreadable, {skipped_ext} ignored by extension") 
-        
+        print(f"\n{scanned} scanned, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
+
+
+
+    # Ranks photos from sharpest to blurriest
+    elif args.command == "sharpness":
+        print(f"Scoring {args.folder}...")
+        folder = Path(args.folder)
+
+        ranked, too_small = [], [] # (score, name) pairs
+        skipped_ext = skipped_bad = 0
+
+        for file in folder.rglob("*"):
+            if not file.is_file():
+                continue
+
+            if file.suffix.lower() not in IMAGE_EXTS | RAW_EXTS:
+                skipped_ext += 1
+                continue
+
+            try:
+                with open_image(file) as image:
+                    score = sharpness(image)
+                    small = max(image.size) < LONG_EDGE
+                (too_small if small else ranked).append((score, str(file.relative_to(folder))))
+
+            # Corrupt, empty or fake image files end up here
+            except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
+                print(f"Skipping {file.name}: {e}")
+                skipped_bad += 1
+
+        print(Fore.GREEN + "\n === Sharpest to blurriest ===" + Style.RESET_ALL)
+        for rank, (score, name) in enumerate(sorted(ranked, reverse=True), 1):
+            print(f"{rank:4}. {score:10.2f}  {name}")
+
+        # Small images score too high, so they can't be compared with the ranking above
+        if too_small:
+            print(Fore.YELLOW + f"\n === Under {LONG_EDGE}px, not comparable with the ranking above ===" + Style.RESET_ALL)
+            for score, name in sorted(too_small, reverse=True):
+                print(f"      {score:10.2f}  {name}")
+
+        # Summary
+        print(f"\n{len(ranked) + len(too_small)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
+
 
 
     else:
