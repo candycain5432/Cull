@@ -8,46 +8,17 @@ from PIL.ExifTags import TAGS, GPSTAGS, IFD
 from colorama import Fore, Back,Style
 import io
 import rawpy
-from cull.exposure import DARK, exposure
-from cull.sharpness import LONG_EDGE, sharpness
+from bisect import bisect_left
+from cull.analyze import IMAGE_EXTS, RAW_EXTS, analyze_folder
+from cull.exposure import DARK
+from cull.folders import output_folder, write_folders
+from cull.grouping import group_photos
+from cull.picks import choose
+from cull.sharpness import LONG_EDGE
 
-RAW_EXTS = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"}
-
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
-
-# Opens a photo for analysis, RAWs use their embedded preview
-def open_image(file):
-    if file.suffix.lower() not in RAW_EXTS:
-        return Image.open(file)
-    with rawpy.imread(str(file)) as raw:
-        thumb = raw.extract_thumb()
-    if thumb.format == rawpy.ThumbFormat.JPEG:
-        return Image.open(io.BytesIO(thumb.data))
-    return Image.fromarray(thumb.data) # Bitmap previews are already pixels
-
-# Runs measure on every photo in a folder, returns the (name, result) pairs and the skip counts
-def score_folder(folder, measure):
-    results = []
-    skipped_ext = skipped_bad = 0
-
-    for file in folder.rglob("*"):
-        if not file.is_file():
-            continue
-
-        if file.suffix.lower() not in IMAGE_EXTS | RAW_EXTS:
-            skipped_ext += 1
-            continue
-
-        try:
-            with open_image(file) as image:
-                results.append((str(file.relative_to(folder)), measure(image)))
-
-        # Corrupt, empty or fake image files end up here
-        except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
-            print(f"Skipping {file.name}: {e}")
-            skipped_bad += 1
-
-    return results, skipped_bad, skipped_ext
+# Prints the line at the end of every report
+def print_summary(photos, skipped_bad, skipped_ext, fresh):
+    print(f"\n{len(photos)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension, {fresh} newly analyzed")
 
 # Main function
 def main():
@@ -60,10 +31,14 @@ def main():
     sorter = sub.add_parser("sort", help="sort the photos into folders based on file extension") # Adds <sort> command
     sharp = sub.add_parser("sharpness", help="Rank photos from sharpest to blurriest") # Adds <sharpness> command
     expose = sub.add_parser("exposure", help="Rank photos from best to worst exposed") # Adds <exposure> command
+    score = sub.add_parser("score", help="Show every score for every photo") # Adds <score> command
+    grouper = sub.add_parser("group", help="Group similar shots and suggest the best of each") # Adds <group> command
     sorter.add_argument("folder", help="path to the shoot")
     scan.add_argument("folder", help="Path to the shoot")
     sharp.add_argument("folder", help="Path to the shoot")
     expose.add_argument("folder", help="Path to the shoot")
+    score.add_argument("folder", help="Path to the shoot")
+    grouper.add_argument("folder", help="Path to the shoot")
 
     args = parser.parse_args()
     
@@ -184,52 +159,108 @@ def main():
     # Ranks photos from sharpest to blurriest
     elif args.command == "sharpness":
         print(f"Scoring {args.folder}...")
-        results, skipped_bad, skipped_ext = score_folder(
-            Path(args.folder), lambda image: (sharpness(image), max(image.size) < LONG_EDGE))
+        photos, skipped_bad, skipped_ext, fresh = analyze_folder(Path(args.folder))
 
-        ranked = [(score, name) for name, (score, small) in results if not small]
-        too_small = [(score, name) for name, (score, small) in results if small]
+        ranked = [photo for photo in photos if photo.long_edge >= LONG_EDGE]
+        too_small = [photo for photo in photos if photo.long_edge < LONG_EDGE]
 
         print(Fore.GREEN + "\n === Sharpest to blurriest ===" + Style.RESET_ALL)
-        for rank, (score, name) in enumerate(sorted(ranked, reverse=True), 1):
-            print(f"{rank:4}. {score:10.2f}  {name}")
+        for rank, photo in enumerate(sorted(ranked, key=lambda photo: photo.sharpness, reverse=True), 1):
+            print(f"{rank:4}. {photo.sharpness:10.2f}  {photo.name}")
 
         # Small images score too high, so they can't be compared with the ranking above
         if too_small:
             print(Fore.YELLOW + f"\n === Under {LONG_EDGE}px, not comparable with the ranking above ===" + Style.RESET_ALL)
-            for score, name in sorted(too_small, reverse=True):
-                print(f"      {score:10.2f}  {name}")
+            for photo in sorted(too_small, key=lambda photo: photo.sharpness, reverse=True):
+                print(f"      {photo.sharpness:10.2f}  {photo.name}")
 
-        # Summary
-        print(f"\n{len(results)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
+        print_summary(photos, skipped_bad, skipped_ext, fresh)
 
 
 
     # Ranks photos from best to worst exposed
     elif args.command == "exposure":
         print(f"Scoring {args.folder}...")
-        results, skipped_bad, skipped_ext = score_folder(Path(args.folder), exposure)
+        photos, skipped_bad, skipped_ext, fresh = analyze_folder(Path(args.folder))
 
-        ranked = [(blown + crushed, blown, crushed, shade, name) for name, (blown, crushed, shade) in results if shade >= DARK]
-        dark = [(blown + crushed, blown, crushed, shade, name) for name, (blown, crushed, shade) in results if shade < DARK]
+        ranked = [photo for photo in photos if photo.brightness >= DARK]
+        dark = [photo for photo in photos if photo.brightness < DARK]
 
         def print_row(label, photo):
-            clipped, blown, crushed, shade, name = photo
-            print(f"{label:>5} {clipped:7.2f}% {blown:7.2f}% {crushed:8.2f}% {shade:6.0f}  {name}")
+            print(f"{label:>5} {photo.clipped:7.2f}% {photo.blown:7.2f}% {photo.crushed:8.2f}% {photo.brightness:6.0f}  {photo.name}")
 
         print(Fore.GREEN + "\n === Best to worst exposed ===" + Style.RESET_ALL)
         print(f"{'':5} {'clipped':>8} {'blown':>8} {'crushed':>9} {'bright':>6}")
-        for rank, photo in enumerate(sorted(ranked), 1):
+        for rank, photo in enumerate(sorted(ranked, key=lambda photo: (photo.clipped, photo.name)), 1):
             print_row(f"{rank}.", photo)
 
         # Underexposed photos and real night scenes look the same, so these aren't ranked
         if dark:
             print(Fore.YELLOW + "\n === Very dark, could be underexposed or a night scene, check by eye ===" + Style.RESET_ALL)
-            for photo in sorted(dark, key=lambda photo: photo[3]):
+            for photo in sorted(dark, key=lambda photo: photo.brightness):
                 print_row("", photo)
 
-        # Summary
-        print(f"\n{len(results)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension")
+        print_summary(photos, skipped_bad, skipped_ext, fresh)
+
+
+
+    # Shows every category side by side
+    elif args.command == "score":
+        print(f"Scoring {args.folder}...")
+        photos, skipped_bad, skipped_ext, fresh = analyze_folder(Path(args.folder))
+
+        # Sharpness is relative, so it's shown as the % of this shoot a photo beats
+        comparable = sorted(photo.sharpness for photo in photos if photo.long_edge >= LONG_EDGE)
+
+        print(Fore.GREEN + "\n === Scores ===" + Style.RESET_ALL)
+        print(f"{'sharp':>10} {'beats':>6} {'clipped':>8} {'blown':>8} {'crushed':>8} {'bright':>6}  {'note':5}  photo")
+        for photo in sorted(photos, key=lambda photo: photo.name):
+            small = photo.long_edge < LONG_EDGE
+            beats = "-" if small else f"{bisect_left(comparable, photo.sharpness) / max(1, len(comparable) - 1) * 100:.0f}%"
+            note = "small" if small else "dark" if photo.brightness < DARK else ""
+            print(f"{photo.sharpness:10.2f} {beats:>6} {photo.clipped:7.2f}% {photo.blown:7.2f}% {photo.crushed:7.2f}% {photo.brightness:6.0f}  {note:5}  {photo.name}")
+
+        print_summary(photos, skipped_bad, skipped_ext, fresh)
+
+
+
+    # Groups similar shots and suggests the best of each
+    elif args.command == "group":
+        print(f"Grouping {args.folder}...")
+        photos, skipped_bad, skipped_ext, fresh = analyze_folder(Path(args.folder))
+        groups, singles = group_photos(photos)
+        decided = []
+
+        for group in groups:
+            pick, reasons = choose(group)
+            decided.append((group, pick))
+            width = max(len(photo.name) for photo in group.photos)
+
+            print(Fore.GREEN + f"\n === {group.kind}, {len(group.photos)} photos ===" + Style.RESET_ALL)
+            print(f"PICK  {pick.name:{width}}  {reasons[pick.name]}")
+            for photo in group.photos:
+                if photo is not pick:
+                    print(f"      {photo.name:{width}}  {reasons[photo.name]}")
+
+        # Nothing to compare these with, so there's no decision to make
+        if singles:
+            print(Fore.YELLOW + f"\n === No similar shots, {len(singles)} photos ===" + Style.RESET_ALL)
+            for photo in sorted(singles, key=lambda photo: photo.name):
+                print(f"      {photo.name}")
+
+        print(f"\n{len(groups)} groups, {len(singles)} singles")
+        print_summary(photos, skipped_bad, skipped_ext, fresh)
+
+        # Never overwrites old folders, the photographer may have sorted through them
+        output = output_folder(Path(args.folder))
+        if output.exists():
+            print(f"{output} already exists, delete it to rebuild the folders")
+        elif photos:
+            try:
+                write_folders(Path(args.folder), decided, singles)
+                print(f"Folders written to {output}")
+            except OSError as e:
+                print(f"Couldn't write the folders: {e}")
 
 
 

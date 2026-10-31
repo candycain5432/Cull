@@ -30,8 +30,8 @@ Oct 19, 2026 · @William Cain
 **Goal:** score each photo's quality.
 
 - [x] Sharpness (variance of the Laplacian)
-- [ ] Exposure (histogram clipping)
-- [ ] Save the results to a SQLite cache
+- [x] Exposure (histogram clipping)
+- [x] Save the results to a SQLite cache
 
 **Done when:** a report ranks every photo from sharpest to blurriest, and a second run is instant.
 
@@ -39,10 +39,10 @@ Oct 19, 2026 · @William Cain
 
 **Goal:** find bursts and duplicates.
 
-- [ ] Group shots by time gap
-- [ ] Compare images with perceptual hashing
-- [ ] Pick the best frame in each group
-- [ ] Attach a reason to every decision
+- [x] Group shots by time gap
+- [x] Compare images with perceptual hashing
+- [x] Pick the best frame in each group
+- [x] Attach a reason to every decision
 
 **Done when:** the report shows groups, each with a suggested pick and an explanation.
 
