@@ -2,8 +2,6 @@
 import numpy as np
 from PIL import Image
 
-LONG_EDGE = 1024 # Scores are only comparable when photos are measured at the same size
-
 
 # Grayscale, because sharpness is about brightness edges and color only adds noise
 def to_gray(image):
@@ -12,9 +10,9 @@ def to_gray(image):
     return image.convert("L")
 
 
-# Shrinks to LONG_EDGE, smaller images are left alone as upscaling would fake the score
-def downscale(image):
-    scale = LONG_EDGE / max(image.size)
+# Scores are only comparable at the same size, smaller images are left alone as upscaling would fake the score
+def downscale(image, long_edge):
+    scale = long_edge / max(image.size)
     if scale >= 1:
         return image
     size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
@@ -28,6 +26,6 @@ def laplacian(gray):
 
 
 # Raw score for one PIL image, only meaningful relative to other photos
-def sharpness(image):
-    gray = np.asarray(downscale(to_gray(image)), dtype=np.float64) # float so negatives don't wrap
+def sharpness(image, long_edge):
+    gray = np.asarray(downscale(to_gray(image), long_edge), dtype=np.float64) # float so negatives don't wrap
     return float(laplacian(gray).var())

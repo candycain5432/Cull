@@ -1,0 +1,115 @@
+# Cull settings
+#
+# Every setting is listed here with its default value. Delete a line to go back to the default.
+#   cull config show     lists the settings in use and what you've changed
+#   cull config themes   previews the color themes
+
+
+[display]
+theme = "default"       # default, ocean, sunset, colorblind or mono
+color = "auto"          # auto (only in a terminal), always or never
+symbols = "auto"        # auto, unicode or ascii, ascii suits terminals that show ? for symbols
+banner = true           # The title line at the top of every report
+table_box = "rounded"   # rounded, simple, heavy, double, ascii, minimal or none
+section_style = "rule"  # rule draws a line across the terminal, plain prints === Title ===
+stripes = false         # Shades every other table row
+decimals = 2            # Decimal places for scores
+max_rows = 0            # Rows in the sharpness, exposure and score reports, 0 shows them all
+score_order = "name"    # Order of the score report: name, sharpness or clipped
+score_bars = true       # The small bars in the sharpness and exposure reports
+score_bar_width = 12    # Width of those bars
+summary = true          # The totals at the end of a report
+elapsed = true          # Adds how long the run took to the totals
+show_unreadable = true  # Lists the files that couldn't be opened
+show_singles = true     # Lists photos with no similar shots in the group report
+show_reasons = true     # Explains every decision in the group report
+
+
+[progress]
+style = "bar"           # bar, spinner or none
+bar_width = 32          # Width of the bar
+spinner = "dots"        # dots, line, arc, moon, earth, clock, bouncingBall and more
+refresh_rate = 10       # Redraws per second
+percent = true          # Shows 42%
+count = true            # Shows 42/131
+speed = true            # Shows photos per second
+eta = true              # Shows the time left
+current_file = true     # Shows the file being worked on
+keep_finished = false   # Leaves the finished bar on screen instead of clearing it
+
+
+[highlight]
+# When the report colors turn. These only change the colors, never a score or a pick.
+sharp_good = 66.0       # Beats this % of the shoot and sharpness uses the good color
+sharp_poor = 33.0       # Beats less than this % of the shoot and sharpness uses the bad color
+clipped_warn = 2.0      # This % clipped and exposure uses the warn color
+clipped_bad = 10.0      # This % clipped and exposure uses the bad color
+
+
+[colors]
+# Overrides single colors of the theme. Use a name, a hex color, or styles like "bold red".
+# accent = "bold cyan"     # Titles and spinners
+# heading = "bold"         # Table headings and section titles
+# good = "green"           # Sharp or clean scores
+# warn = "yellow"          # Scores to look at, and warnings
+# bad = "red"              # Blurry or clipped scores, and errors
+# muted = "dim"            # Paths, borders and other quiet text
+# pick = "bold green"      # The suggested photo in a group
+# bar = "cyan"             # A progress bar that's still moving
+# bar_done = "green"       # A finished progress bar
+# stripe = "on grey11"     # The shaded rows when stripes is on, try "on grey93" on a light terminal
+
+
+[scoring]
+# Changing long_edge, blown, crushed or max_megapixels analyzes the photos again.
+long_edge = 1024        # Pixels, photos shrink to this before they're measured
+blown = 253             # Any channel this bright (0 to 255) counts as blown
+crushed = 5             # All channels this dark (0 to 255) count as crushed
+dark = 64               # Average brightness below this goes on the check by eye list
+max_megapixels = 600    # Larger images are skipped as unreadable
+
+
+[grouping]
+burst_gap = 1.0         # Seconds, same camera this close is one burst
+scene_gap = 30.0        # Seconds, same camera this close is a retake if the photos look alike
+similar = 14            # Hash bits (0 to 64), photos this close look alike
+duplicate = 4           # Hash bits (0 to 64), photos this close are the same picture
+
+
+[picks]
+clip_margin = 5.0       # Points of extra clipping that rule a frame out, however sharp it is
+same_sharpness = 0.5    # Percent, closer than this is a tie
+
+
+[folders]
+write = true            # cull group writes the group folders
+suffix = "_groups"      # Added to the shoot's name to name the output folder
+pick_prefix = "PICK_"   # Added to the name of the suggested photo
+singles_folder = "singles"   # Folder for photos with no similar shots
+write_singles = true    # Set to false to leave singles out of the output folder
+number_width = 3        # Digits in the group number, 3 gives 001_burst
+link = "hardlink"       # hardlink, symlink or copy, a link that fails becomes a copy
+
+
+[files]
+image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
+raw_extensions = [".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"]
+recursive = true        # Looks inside subfolders
+skip_hidden = false     # Ignores files and folders that start with a dot
+ignore = []             # File or folder names to ignore, wildcards work: ["*_edit.jpg", "Rejects"]
+
+
+[sort]
+extensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "avif", "heic", "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "raf"]
+rejects_folder = "Rejects"   # Folder for every other file type
+keep_empty_folders = true    # Set to false to only create folders that get a file
+
+
+[scan]
+hide_tags = ["ExifOffset", "GPSInfo"]   # EXIF tags to leave out
+show_gps = true         # Set to false to hide location data
+
+
+[cache]
+enabled = true          # Set to false to analyze every photo on every run
+folder = "~/.cache/cull"   # Where cache.db lives, keep it outside your shoots

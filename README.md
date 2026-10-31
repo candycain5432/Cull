@@ -28,6 +28,8 @@ All final decisions remain with the photographer. Cull never deletes or edits a 
 | Group folders | Lays the groups out as folders without moving your originals |
 | RAW support | Reads CR2, CR3, NEF, ARW, DNG, ORF, RW2, and RAF files through their embedded previews |
 | Instant repeat runs | Results are cached in SQLite, so a second run doesn't reopen any photos |
+| Color reports | Tables, score bars, and live progress bars, with five color themes |
+| Config file | Change the thresholds, colors, file types, and folder names in one TOML file |
 
 ## Installation
 
@@ -70,16 +72,20 @@ pip install .
 | `cull exposure ./shoot` | Ranks photos from best to worst exposed |
 | `cull scan ./shoot` | Prints the EXIF data of every photo |
 | `cull sort ./shoot` | Moves photos into folders by file type |
+| `cull config` | Shows the settings in use, see [Configuration](#configuration) |
+
+Every command also takes `--no-color`, `--no-progress`, and `--config FILE`.
 
 `cull group` is the one most people want:
 
 ```
 $ cull group ./shoot
+Cull · Grouping ./shoot
 
- === Burst, 3 photos ===
-PICK  DSC1070.jpg  Sharpest, next best is DSC1069.jpg at 92% less sharp, DSC1071.jpg is sharper but 80.5% clipped against 5.8%
-      DSC1069.jpg  92% less sharp than the pick
-      DSC1071.jpg  80.5% clipped, the pick is 5.8%
+ Burst, 3 photos  ──────────────────────────────────────────────────────
+★ PICK  DSC1070.jpg  Sharpest, next best is DSC1069.jpg at 92% less sharp, DSC1071.jpg is sharper but 80.5% clipped against 5.8%
+        DSC1069.jpg  92% less sharp than the pick
+        DSC1071.jpg  80.5% clipped, the pick is 5.8%
 ```
 
 It also creates a `shoot_groups` folder next to `shoot`, with one folder per group and the suggested frame marked `PICK_`:
@@ -99,7 +105,58 @@ The files in there are hard links, so they take no extra disk space and your ori
 - Deleting a photo from `shoot_groups` doesn't delete the original.
 - A program that saves over a file in `shoot_groups` also changes the original, because they are the same file. Edit a copy if you're unsure.
 
-If a drive can't do hard links, Cull makes normal copies instead. Cull never overwrites an existing `shoot_groups` folder, so delete it to rebuild it.
+If a drive can't do hard links, Cull makes normal copies instead. To choose yourself, set `link` in the `[folders]` section of the config to `symlink` or `copy`. Cull never overwrites an existing `shoot_groups` folder, so delete it to rebuild it.
+
+Sending a report to a file or another program gives plain columns with no colors or borders, so `cull score ./shoot > scores.txt` is easy to search. Cull also follows the `NO_COLOR` environment variable.
+
+## Configuration
+
+Colors, progress bars, scoring thresholds, grouping rules, folder names, and file types can all be changed without touching the code.
+
+```bash
+cull config init     # Creates the config file, with every setting explained
+cull config show     # Lists the settings in use and what you've changed
+cull config themes   # Previews the color themes
+cull config path     # Prints where the config file is
+```
+
+The file lives at `~/.config/cull/config.toml`, and only needs the settings you want to change:
+
+```toml
+[display]
+theme = "ocean"
+max_rows = 50
+
+[grouping]
+scene_gap = 10.0
+
+[folders]
+suffix = "_culled"
+link = "copy"
+
+[files]
+image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"]
+ignore = ["*_edit.jpg", "Rejects"]
+```
+
+| Section | What it changes |
+| --- | --- |
+| `[display]` | Theme, table style, score bars, decimal places, row limit, and which parts of a report appear |
+| `[progress]` | Bar or spinner, its width, and which details it shows |
+| `[highlight]` | The scores at which report colors change |
+| `[colors]` | Any single color of the theme |
+| `[scoring]` | Sharpness size, blown and crushed limits, the dark limit, and the largest image to open |
+| `[grouping]` | Burst and retake time gaps, and how alike two photos have to be |
+| `[picks]` | How much extra clipping rules out a frame, and what counts as a tie |
+| `[folders]` | Output folder names, the pick marker, and hard links, symlinks, or copies |
+| `[files]` | File types, subfolders, hidden files, and names to ignore |
+| `[sort]` | The folders `cull sort` creates |
+| `[scan]` | EXIF tags to hide, including location data |
+| `[cache]` | Turns the cache off, or moves it |
+
+To use a different file, pass `--config FILE` or set the `CULL_CONFIG` environment variable. A misspelled setting prints a warning and is ignored, and a value that can't work stops the run with a list of what's wrong.
+
+Changing `long_edge`, `blown`, `crushed`, or `max_megapixels` changes the scores themselves, so the next run analyzes those photos again.
 
 ## How It Works
 
@@ -111,7 +168,7 @@ If a drive can't do hard links, Cull makes normal copies instead. Cull never ove
    - **Duplicates:** near-identical, with the same capture time or a missing date
 4. **Pick** – Within each group, drops undersized copies, then frames with 5 or more points of extra clipping, and picks the sharpest of what's left.
 
-Results are saved to `~/.cache/cull/cache.db`. A photo is only analyzed again if its size or modified time changes. It's safe to delete this file at any time.
+Results are saved to `~/.cache/cull/cache.db`. A photo is only analyzed again if its size, modified time, or scoring settings change. It's safe to delete this file at any time.
 
 ## Limitations
 
@@ -121,13 +178,17 @@ Results are saved to `~/.cache/cull/cache.db`. A photo is only analyzed again if
 - **Clipping can't reliably catch underexposure.** Very dark photos are listed separately to check by eye, because they look the same as real night scenes. Photos about 1 stop under can still rank well.
 - **RAW exposure is read from the preview.** Highlights that look blown there may still be recoverable from the RAW data.
 - **Photos without a capture date** can only be matched as duplicates.
-- **HEIC, WebP, and AVIF files aren't analyzed yet.**
+- **HEIC and AVIF files aren't analyzed yet.** WebP files are skipped by default, add `.webp` to `image_extensions` in the config to include them.
 
 ## Project Structure
 
 ```
 src/cull/
 ├── cli.py          Command-line entry point and reports
+├── ui.py           Colors, tables, and progress bars
+├── themes.py       Color themes
+├── config.py       Loads and checks the config file
+├── default.toml    Every setting and its default value
 ├── analyze.py      Opens photos, reads EXIF data, runs every measurement
 ├── sharpness.py    Laplacian-based sharpness scoring
 ├── exposure.py     Histogram clipping detection
@@ -145,7 +206,7 @@ src/cull/
 | Image analysis | Pillow, NumPy |
 | RAW files | rawpy |
 | Storage | SQLite |
-| Terminal output | colorama |
+| Terminal output | Rich |
 | Packaging | uv |
 
 ## Roadmap

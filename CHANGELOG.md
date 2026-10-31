@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Color reports with tables, score bars, and a totals panel
+- Live progress bars with the time left, speed, and current file, for analyzing, sorting, and writing group folders
+- Five color themes: default, ocean, sunset, colorblind, and mono
+- A config file at `~/.config/cull/config.toml`, covering display, progress, colors, scoring, grouping, picks, folders, file types, `cull sort`, `cull scan`, and the cache
+- `cull config` to show the settings, create the file, print its path, and preview the themes
+- `--config`, `--no-color`, and `--no-progress` on every command
+- Group folders can now use symlinks or copies instead of hard links
+- WebP photos can be analyzed by adding `.webp` to `image_extensions`
+
+### Changed
+
+- Reports sent to a file or another program are now plain columns, with no color codes
+- Narrow terminals leave out the less important columns instead of cutting off scores and names
+- Cached results now remember the scoring settings that made them, so the first run after updating analyzes every photo again
+
+### Fixed
+
+- A read-only cache no longer crashes the run, Cull warns and carries on without saving
+- Images between 300MP and 600MP no longer print a Pillow warning
+
 ## 0.1.0 - 2026-10-31
 
 The first release. Cull can now score a folder of photos, group similar shots, and suggest the best frame in each group.
