@@ -8,6 +8,9 @@
 - Keyboard controls for the whole review: P to pick, X to reject, arrow keys to move, and A to accept a group in one key
 - Side-by-side compare view with 100% zoom, and both sides pan to the same spot
 - Review decisions save as they're made to a file beside the shoot, so a review can be stopped and carried on later
+- Pick the suggested frame of every group at once with R or the Pick suggested button
+- Reject every undecided photo at once with Shift+X or the Reject undecided button, they stay in the shoot until you choose to delete them
+- Finish a review from the review screen: delete rejects to the Trash and move picks to a `shoot_picks` folder, each after an "Are you sure?" prompt
 - A `[review]` section in the config, and `--port` and `--no-browser` on `cull review`
 - Color reports with tables, score bars, and a totals panel
 - Live progress bars with the time left, speed, and current file, for analyzing, sorting, and writing group folders

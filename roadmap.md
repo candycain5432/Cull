@@ -56,6 +56,7 @@ Oct 19, 2026 · @William Cain
 - [x] Grid of groups with the suggested pick highlighted
 - [x] Keyboard controls: P = pick, X = reject, arrow keys to move
 - [x] Side-by-side compare view
+- [x] Send rejects to the Trash and move picks to their own folder, after an "Are you sure?" prompt
 
 **Done when:** you can cull a full shoot without touching the mouse.
 
@@ -80,7 +81,7 @@ Oct 19, 2026 · @William Cain
 
 - [ ] Write XMP sidecar files that Lightroom and darktable can read
 - [ ] Optionally move rejects to a `_rejected/` folder
-- [ ] Never delete anything, ever
+- [ ] Only delete when asked, and only to the Trash
 
 **Done when:** you open the shoot in darktable and your picks are already flagged.
 

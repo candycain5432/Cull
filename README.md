@@ -14,7 +14,7 @@
 
 A typical photo shoot produces hundreds or thousands of frames, most of which will never be used. Sorting through them by hand is slow and repetitive. Cull automates the technical side of that process: it scores every photo in a folder, groups similar shots together, and suggests the strongest frame in each group, with a plain-language reason for every decision.
 
-All final decisions remain with the photographer. Cull never deletes or edits a photo.
+All final decisions remain with the photographer. Cull never edits a photo, and it only deletes rejects or moves picks when you ask it to and confirm.
 
 ## Features
 
@@ -26,6 +26,9 @@ All final decisions remain with the photographer. Cull never deletes or edits a 
 | Duplicate detection | Finds copies with perceptual hashing, even if they were resized, rotated, or lost their EXIF data |
 | Suggested picks | Picks the best frame in each group and explains every decision |
 | Review screen | Pick and reject photos in your browser using only the keyboard, with a grid of groups and a side-by-side compare view |
+| Pick all suggested | Picks the suggested frame of every group with one key or click |
+| Reject the rest | Rejects every photo you haven't decided on, and keeps them until you choose to delete them |
+| Finish a review | Sends rejects to the Trash and moves picks to their own folder, after an "Are you sure?" prompt |
 | Group folders | Lays the groups out as folders without moving your originals |
 | RAW support | Reads CR2, CR3, NEF, ARW, DNG, ORF, RW2, and RAF files through their embedded previews |
 | Instant repeat runs | Results are cached in SQLite, so a second run doesn't reopen any photos |
@@ -139,14 +142,42 @@ Everything can be done from the keyboard:
 | `Shift` + arrow keys | | Pan | Pan both photos |
 | `Esc` | | Back to the grid | Back to the grid |
 | `Ctrl+Z` | Undo | Undo | Undo |
+| `R` | Pick all suggested | Pick all suggested | Pick all suggested |
+| `Shift+X` | Reject undecided | Reject undecided | Reject undecided |
+| `D` | Delete rejects | Delete rejects | Delete rejects |
+| `M` | Move picks | Move picks | Move picks |
 
 Pressing `P` or `X` a second time takes the decision back. `A` is the fast path through a shoot: it picks the suggested frame and rejects everything else in the group, but it never changes a decision you've already made. It doesn't work on the "No similar shots" section, because those photos have nothing in common.
+
+To take every suggestion at once, press `R` or click **Pick suggested**. It picks the suggested frame of each group and leaves the other frames undecided, so nothing gets rejected without you seeing it. Like `A`, it never changes a decision you've already made, and it skips a group that already has a pick. `Ctrl+Z` takes the whole lot back in one go.
 
 To choose between frames by hand, press `C`. The suggested frame starts on the left, and the arrow keys change the photo on the right. When the right one is better, press `S` to move it to the left, then press `A` to keep whichever photo finished on the left.
 
 Decisions save as you make them, to a file beside the shoot called `shoot_review.json`, so you can stop and carry on later. Rejecting a photo only records the decision, nothing is moved or deleted. Other photo apps can't read this file yet, that comes with XMP export in v0.4.
 
 The review screen is only reachable from your own computer.
+
+### Finishing a review
+
+When you're done choosing, three buttons at the top right act on your decisions. `Shift+X`, `D`, and `M` do the same from the keyboard. All three stop at an "Are you sure?" prompt that lists every photo first.
+
+| Button | What it does |
+| --- | --- |
+| Reject undecided | Marks every photo with no decision as rejected. They stay in the shoot until you choose Delete rejects, and `Ctrl+Z` takes them all back |
+| Delete rejects | Sends every rejected photo to your system Trash, where you can restore it until the Trash is emptied |
+| Move picks | Moves every picked photo out of the shoot and into a `shoot_picks` folder next to it |
+
+Delete rejects and Move picks leave photos with no decision where they are.
+
+The quick way through a shoot is to press `R` to take the suggestions, change any you disagree with, then press `Shift+X` to reject everything else. Look through the rejects, and press `D` when you're happy.
+
+To confirm from the keyboard, press `Tab` then `Enter`. Cancel starts selected, so pressing `Enter` straight away, or `Esc`, backs out.
+
+- **Delete rejects and Move picks can't be undone with `Ctrl+Z`.** Restore deleted photos from the Trash, and move picks back by hand.
+- **If a photo can't be moved,** it stays in the shoot with its decision, and the review screen says why. Cull never falls back to deleting a photo for good, even on a drive with no Trash.
+- **Picks never overwrite each other.** Photos from subfolders keep the folder in their name, like `card2__IMG_0001.jpg`, and a name that's already taken gets a number.
+- **`shoot_groups` isn't updated.** Hard links there keep a deleted photo on disk until you delete that folder too, and symlinks there stop working.
+- **Related files stay behind.** The JPEG of a RAW+JPEG pair is its own photo with its own decision, and sidecar files like `.xmp` aren't moved.
 
 ## Configuration
 
@@ -188,7 +219,7 @@ ignore = ["*_edit.jpg", "Rejects"]
 | `[grouping]` | Burst and retake time gaps, and how alike two photos have to be |
 | `[picks]` | How much extra clipping rules out a frame, and what counts as a tie |
 | `[folders]` | Output folder names, the pick marker, and hard links, symlinks, or copies |
-| `[review]` | Port, opening the browser, moving on after a decision, thumbnail size, and the decisions file name |
+| `[review]` | Port, opening the browser, moving on after a decision, thumbnail size, and the names of the decisions file and picks folder |
 | `[files]` | File types, subfolders, hidden files, and names to ignore |
 | `[sort]` | The folders `cull sort` creates |
 | `[scan]` | EXIF tags to hide, including location data |
@@ -238,6 +269,7 @@ src/cull/
 ├── folders.py      Group folder output
 ├── cache.py        SQLite cache
 ├── review.py       What the review screen shows, and saving decisions
+├── finish.py       Sends rejects to the Trash and moves picks
 ├── previews.py     Turns photos into images a browser can show
 ├── server.py       Local web server for the review screen
 └── web/            The review screen itself
@@ -251,7 +283,7 @@ src/cull/
 | RAW files | rawpy |
 | Storage | SQLite |
 | Terminal output | Rich |
-| Review screen | FastAPI, Uvicorn, plain JavaScript |
+| Review screen | FastAPI, Uvicorn, Send2Trash, plain JavaScript |
 | Packaging | uv |
 
 ## Roadmap
@@ -268,6 +300,7 @@ src/cull/
 - [x] Grid view of grouped images
 - [x] Keyboard pick/reject controls
 - [x] Side-by-side compare view
+- [x] Delete rejects and move picks
 
 ### v0.3 – Smarter analysis
 - [ ] Face detection

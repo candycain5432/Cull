@@ -3,7 +3,7 @@
 // The keys listed in the footer, one set for each view
 const HINTS = {
   grid: [["Arrows", "Move"], ["P", "Pick"], ["X", "Reject"], ["U", "Clear"], ["A", "Accept group"], ["Tab", "Next group"],
-         ["N", "Next undecided"], ["Enter", "Open"], ["C", "Compare"], ["Ctrl+Z", "Undo"]],
+         ["N", "Next undecided"], ["Enter", "Open"], ["C", "Compare"], ["Ctrl+Z", "Undo"], ["R", "Pick all suggested"], ["Shift+X", "Reject undecided"], ["D", "Delete rejects"], ["M", "Move picks"]],
   single: [["← →", "Previous, next"], ["P", "Pick"], ["X", "Reject"], ["U", "Clear"], ["A", "Accept group"], ["Tab", "Next group"],
            ["Z", "Zoom 100%"], ["Shift+Arrows", "Pan"], ["C", "Compare"], ["Esc", "Back to grid"]],
   compare: [["← →", "Change right photo"], ["P", "Pick right"], ["X", "Reject right"], ["U", "Clear right"], ["S", "Keep right, move it left"],
@@ -14,6 +14,33 @@ const PAN_STEP = 0.1; // Of the photo's size
 const RETRY_AFTER = 3000; // Milliseconds
 const NOTICE_FOR = 3000; // Milliseconds
 
+// What each finishing action needs, the server only deletes or moves photos that still have this decision
+const ACTIONS = {
+  reject: {
+    decision: null,
+    none: "Every photo already has a decision",
+    confirm: count => `Reject ${photoCount(count)}`,
+    explain: count => `${photoCount(count)} with no decision will be marked as rejected. They stay in the shoot until you choose Delete rejects, and Ctrl+Z takes them all back.`,
+    report: count => `${photoCount(count)} rejected, none deleted. Ctrl+Z takes them all back`,
+  },
+  delete: {
+    decision: "reject",
+    none: "There are no rejected photos to delete",
+    working: "Deleting...",
+    confirm: count => `Delete ${photoCount(count)}`,
+    explain: count => `${photoCount(count)} marked as rejected will go to the Trash. You can restore them from there until it's emptied.`,
+    report: count => `${photoCount(count)} moved to the Trash`,
+  },
+  move: {
+    decision: "pick",
+    none: "There are no picked photos to move",
+    working: "Moving...",
+    confirm: count => `Move ${photoCount(count)}`,
+    explain: count => `${photoCount(count)} marked as picks will leave ${shootName} and move to ${picksFolder}.`,
+    report: count => `${photoCount(count)} moved to the picks folder`,
+  },
+};
+
 const $ = id => document.getElementById(id);
 const panes = [$("held"), $("active")].map(element => ({
   element, image: element.querySelector("img"), caption: element.querySelector("figcaption"), photo: null, sharp: false,
@@ -21,6 +48,8 @@ const panes = [$("held"), $("active")].map(element => ({
 const [heldPane, activePane] = panes;
 
 let run = "";
+let shootName = "";
+let picksFolder = "";
 let autoAdvance = true;
 let sections = [];
 let photos = []; // Every photo in the order they're reviewed
@@ -34,10 +63,12 @@ const undoList = [];
 const unsaved = new Map(); // id to decision, kept until the server says they're on disk
 let sending = false;
 let noticeTimer = null;
+let pending = null; // The action and photos waiting on "Are you sure?", set while it's open
 
 const thumbUrl = photo => `/photos/${photo.id}/thumb?v=${run}`;
 const fullUrl = photo => `/photos/${photo.id}/full?v=${run}`;
 const clamp = (value, low, high) => Math.min(Math.max(value, low), high);
+const photoCount = count => `${count} photo${count === 1 ? "" : "s"}`;
 
 
 // Building the page. File names go in through textContent, so a name can never be read as HTML
@@ -75,6 +106,8 @@ function makeTile(photo) {
 
 function build(shoot) {
   run = shoot.run;
+  shootName = shoot.name;
+  picksFolder = shoot.picksFolder;
   autoAdvance = shoot.autoAdvance;
   sections = shoot.sections;
   $("shoot").textContent = shoot.name;
@@ -133,7 +166,16 @@ function paintProgress() {
   const rejects = photos.filter(photo => photo.decision === "reject").length;
   const decided = picks + rejects;
   $("progress").textContent = `${decided} of ${photos.length} decided, ${picks} picks, ${rejects} rejects`;
-  $("meter").firstElementChild.style.width = `${decided / photos.length * 100}%`;
+  const suggested = suggestedToPick().length;
+  $("meter").firstElementChild.style.width = `${photos.length ? decided / photos.length * 100 : 0}%`;
+  $("pickSuggested").textContent = `Pick ${suggested} suggested`;
+  $("pickSuggested").disabled = !suggested;
+  $("rejectUndecided").textContent = `Reject ${photos.length - decided} undecided`;
+  $("rejectUndecided").disabled = decided === photos.length;
+  $("deleteRejects").textContent = `Delete ${rejects} reject${rejects === 1 ? "" : "s"}`;
+  $("deleteRejects").disabled = !rejects;
+  $("movePicks").textContent = `Move ${picks} pick${picks === 1 ? "" : "s"}`;
+  $("movePicks").disabled = !picks;
 }
 
 function paintDetails() {
@@ -259,13 +301,16 @@ function notice(text) {
 }
 
 function showError(text) {
+  clearTimeout(noticeTimer); // An older notice running out must not wipe this
   $("status").textContent = text;
   $("status").classList.add("error");
 }
 
 function clearError() {
-  $("status").textContent = "";
-  $("status").classList.remove("error");
+  if ($("status").classList.contains("error")) { // Every save lands here, and a notice may be showing
+    $("status").textContent = "";
+    $("status").classList.remove("error");
+  }
 }
 
 
@@ -402,6 +447,23 @@ function nextUndecided() {
 
 // Decisions
 
+// The suggested frame of each group that's still open. Like A, a choice already made in a group is left alone
+function suggestedToPick() {
+  return sections.map(section => section.suggestedPhoto)
+                 .filter(photo => photo && !photo.decision && !photo.section.photos.some(other => other.decision === "pick"));
+}
+
+// Only picks, the rest of each group stays undecided so nothing ends up rejected without being looked at
+function pickSuggested() {
+  const chosen = suggestedToPick();
+  if (!chosen.length) {
+    notice("There are no suggested photos left to pick");
+    return;
+  }
+  decide(chosen.map(photo => [photo, "pick"]));
+  notice(`${photoCount(chosen.length)} picked, Ctrl+Z takes them all back`);
+}
+
 function mark(decision) {
   const next = focus.decision === decision ? null : decision; // Pressing the same key again takes it back
   decide([[focus, next]]);
@@ -414,7 +476,7 @@ function mark(decision) {
 function finishGroup() {
   const section = focus.section;
   if (!section.suggestedPhoto) { // Singles have nothing in common, one key must never reject all of them
-    notice("These photos aren't a group, so each one needs its own decision");
+    notice("There's no suggested photo here, so each one needs its own decision");
     return;
   }
 
@@ -497,6 +559,75 @@ function movePan(x, y) {
 }
 
 
+// Finishing up. Nothing leaves the shoot until the photographer has said yes to the exact list of photos
+
+// Cancel starts with the focus, so a stray Enter or Space can't confirm. Yes takes a Tab first, or a click
+function ask(action) {
+  const { decision, none, confirm, explain } = ACTIONS[action];
+  const chosen = photos.filter(photo => photo.decision === decision);
+  if (!chosen.length) {
+    notice(none);
+    return;
+  }
+  if (sending || unsaved.size) { // The server would refuse a decision it hasn't saved yet
+    notice("Still saving your decisions, try again in a moment");
+    return;
+  }
+
+  pending = { action, chosen };
+  $("confirmText").textContent = explain(chosen.length);
+  $("confirmList").replaceChildren(...chosen.map(photo => {
+    const item = document.createElement("li");
+    item.textContent = photo.name;
+    return item;
+  }));
+  $("confirmYes").textContent = confirm(chosen.length);
+  $("confirmYes").classList.toggle("danger", action === "delete");
+  $("confirmYes").disabled = $("confirmNo").disabled = false;
+  $("confirm").showModal();
+  $("confirmNo").focus();
+}
+
+async function finish() {
+  const { action, chosen } = pending;
+  const { working, report } = ACTIONS[action];
+
+  if (action === "reject") { // Only a decision like any other, so it saves and undoes the normal way
+    $("confirm").close();
+    decide(chosen.map(photo => [photo, "reject"]));
+    notice(report(chosen.length));
+    return;
+  }
+
+  $("confirmYes").textContent = working;
+  $("confirmYes").disabled = $("confirmNo").disabled = true;
+  clearError(); // Nothing was left unsaved when the prompt opened, so this can only be an old message
+
+  try {
+    const response = await fetch("/api/finish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run, action, ids: chosen.map(photo => photo.id) }),
+    }).catch(() => { throw new Error("Cull isn't answering, is cull review still running?"); });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail);
+    }
+    await load();
+    if (result.failed.length) {
+      const [first] = result.failed;
+      showError(`${report(result.done)}. ${photoCount(result.failed.length)} stayed in the shoot, ${first.name}: ${first.reason}`);
+    } else {
+      notice(report(result.done));
+    }
+  } catch (error) {
+    showError(error.message); // The server may have got partway, so this can't promise that nothing changed
+  }
+
+  $("confirm").close();
+}
+
+
 // Keys
 
 const KEYS = {
@@ -508,19 +639,22 @@ const KEYS = {
   Enter: () => (viewing ? closeViewer() : openViewer()),
   Escape: () => viewing && closeViewer(),
   p: () => mark("pick"),
-  x: () => mark("reject"),
+  x: event => (event.shiftKey ? ask("reject") : mark("reject")),
   u: () => decide([[focus, null]]),
   a: finishGroup,
   n: nextUndecided,
   c: toggleCompare,
   s: swap,
   z: toggleZoom,
+  r: pickSuggested,
+  d: () => ask("delete"),
+  m: () => ask("move"),
 };
 
 const PAN_KEYS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 
 document.addEventListener("keydown", event => {
-  if (!focus || event.altKey || event.metaKey) {
+  if (!focus || pending || event.altKey || event.metaKey) { // The prompt keeps its own keys, nothing changes behind it
     return;
   }
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
@@ -547,6 +681,25 @@ document.addEventListener("keydown", event => {
   }
 });
 
+$("pickSuggested").addEventListener("click", event => {
+  pickSuggested();
+  event.currentTarget.blur(); // Space would press it again otherwise
+});
+$("rejectUndecided").addEventListener("click", () => ask("reject"));
+$("deleteRejects").addEventListener("click", () => ask("delete"));
+$("movePicks").addEventListener("click", () => ask("move"));
+$("confirmYes").addEventListener("click", finish);
+$("confirmNo").addEventListener("click", () => $("confirm").close());
+$("confirm").addEventListener("cancel", event => { // Esc says no, unless it's too late to stop
+  if ($("confirmNo").disabled) {
+    event.preventDefault();
+  }
+});
+$("confirm").addEventListener("close", () => {
+  pending = null;
+  document.activeElement?.blur(); // Focus returns to the header button, and Space would open the prompt again
+});
+
 panes.forEach(pane => pane.image.addEventListener("load", () => placeImage(pane)));
 addEventListener("resize", () => panes.forEach(placeImage));
 addEventListener("beforeunload", event => {
@@ -556,17 +709,36 @@ addEventListener("beforeunload", event => {
 });
 
 
+// Also runs after photos leave the shoot, the server decides what's left
+async function load() {
+  const response = await fetch("/api/shoot");
+  const shoot = await response.json();
+  const place = focus?.id;
+
+  closeViewer();
+  focus = null;
+  photos = [];
+  undoList.length = 0; // These point at photos from before the reload
+  $("grid").replaceChildren();
+  build(shoot);
+  paintProgress();
+  go(photos.find(photo => photo.id === place) ?? photos.find(photo => !photo.decision) ?? photos[0]);
+
+  if (!photos.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "There are no photos left in this shoot";
+    $("grid").append(empty);
+    ["name", "scores", "reason"].forEach(id => { $(id).textContent = ""; });
+  }
+}
+
 async function start() {
   try {
-    const response = await fetch("/api/shoot");
-    build(await response.json());
+    await load();
   } catch (error) {
     showError(`Couldn't load the shoot: ${error.message}`);
-    return;
   }
-  paintProgress();
-  paintKeys();
-  go(photos.find(photo => !photo.decision) ?? photos[0]);
 }
 
 start();

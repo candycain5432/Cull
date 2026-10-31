@@ -12,7 +12,9 @@ from pydantic import BaseModel
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 from cull.analyze import UNREADABLE
+from cull.finish import DecisionsChanged, finish, picks_folder
 from cull.previews import BROWSER_READY, render
+from cull.review import readable
 
 HOST = "127.0.0.1"
 KEEP_FOR = {"Cache-Control": "private, max-age=86400"} # Every run has its own URLs, so a photo never goes stale
@@ -27,14 +29,21 @@ class Changes(BaseModel):
     changes: list[Change]
 
 
+class Finish(BaseModel):
+    run: str
+    action: Literal["delete", "move"]
+    ids: list[int]
+
+
 def create_app(shoot, decisions, config):
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     # Stops a website from pointing its own domain at this computer to read the photos
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[HOST, "localhost"])
     run = secrets.token_hex(4)
+    picks = picks_folder(shoot.folder, config.review)
 
     def find(photo_id):
-        if not 0 <= photo_id < len(shoot.names):
+        if not 0 <= photo_id < len(shoot.names) or photo_id in shoot.gone:
             raise HTTPException(404, "No such photo")
         return shoot.names[photo_id]
 
@@ -48,19 +57,36 @@ def create_app(shoot, decisions, config):
     def read_shoot():
         saved = decisions.saved
         return {"name": shoot.folder.name, "run": run, "autoAdvance": config.review.auto_advance, "sections": shoot.sections,
+                "picksFolder": readable(str(picks)),
                 "decisions": {number: saved[name] for number, name in enumerate(shoot.names) if name in saved}}
 
     # Browsers won't let another website send JSON here, but they would let it send a plain form
+    def require_json(request):
+        if request.headers.get("content-type") != "application/json":
+            raise HTTPException(415, "This has to be sent as JSON")
+
     @app.post("/api/decisions")
     def save_decisions(body: Changes, request: Request):
-        if request.headers.get("content-type") != "application/json":
-            raise HTTPException(415, "Decisions have to be sent as JSON")
+        require_json(request)
         changes = [(find(change.id), change.decision) for change in body.changes]
         try:
             decisions.apply(changes)
         except OSError as e:
             raise HTTPException(500, f"Couldn't save {decisions.path}: {e.strerror}")
         return {"saved": len(changes)}
+
+    @app.post("/api/finish")
+    def finish_review(body: Finish, request: Request):
+        require_json(request)
+        if body.run != run: # Ids only mean something within one run, an old tab could point at other photos
+            raise HTTPException(409, "This page is from an earlier run, reload it and try again")
+        names = {number: find(number) for number in body.ids} # A bad id stops the request before a photo is touched
+        try:
+            return finish(shoot, decisions, body.action, names, picks)
+        except DecisionsChanged as e:
+            raise HTTPException(409, str(e))
+        except OSError as e:
+            raise HTTPException(500, f"Couldn't save {decisions.path}: {e.strerror}")
 
     @app.get("/photos/{photo_id}/thumb")
     def thumbnail(photo_id: int):

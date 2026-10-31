@@ -97,6 +97,7 @@ open_browser = true     # Opens the review screen when cull review starts
 auto_advance = true     # P and X move on to the next photo
 thumbnail = 512         # Pixels, the long edge of the photos in the grid
 suffix = "_review.json" # Added to the shoot's name to name the file that holds your decisions
+picks_suffix = "_picks" # Added to the shoot's name to name the folder that picks move to
 
 
 [files]

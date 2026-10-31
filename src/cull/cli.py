@@ -489,9 +489,11 @@ def run():
                       f"Review screen at {url}, press Ctrl+C here when you're done")
         serve(create_app(shoot, decisions, config), sock, url, config.review.open_browser and not args.no_browser)
 
-        made = decisions.count(shoot.names)
-        undecided = len(shoot.names) - made.total()
-        ui.summary([f"{made['pick']} picks", f"{made['reject']} rejects", f"{undecided} undecided"],
+        remaining = shoot.remaining()
+        made = decisions.count(remaining)
+        undecided = len(remaining) - made.total()
+        finished = [f"{count} {action}d" for action, count in shoot.finished.items() if count]
+        ui.summary([f"{made['pick']} picks", f"{made['reject']} rejects", f"{undecided} undecided", *finished],
                    f"Decisions saved to {decisions.path}" if made else None)
 
 

@@ -13,6 +13,10 @@
     <div id="meter"><div></div></div>
     <span id="progress"></span>
     <span id="status" role="status"></span>
+    <button id="pickSuggested" type="button" disabled></button>
+    <button id="rejectUndecided" type="button" disabled></button>
+    <button id="deleteRejects" type="button" disabled></button>
+    <button id="movePicks" type="button" disabled></button>
   </header>
 
   <main id="grid"></main>
@@ -26,6 +30,16 @@
     <div id="details"><span id="name"></span><span id="scores"></span><span id="reason"></span></div>
     <div id="keys"></div>
   </footer>
+
+  <dialog id="confirm" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p id="confirmText"></p>
+    <ul id="confirmList"></ul>
+    <div id="confirmButtons">
+      <button id="confirmNo" type="button">Cancel</button>
+      <button id="confirmYes" type="button"></button>
+    </div>
+  </dialog>
 
   <script src="review.js"></script>
 </body>

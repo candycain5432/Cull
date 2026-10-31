@@ -2,7 +2,7 @@
 import json
 import os
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from threading import Lock
 from cull.analyze import beats
 from cull.grouping import group_photos
@@ -21,6 +21,22 @@ class Shoot:
     folder: object
     names: list # A photo's id is its place in this list, the browser never sends a path
     sections: list
+    gone: set = field(default_factory=set) # Ids of the photos deleted or moved out during this run
+    finished: Counter = field(default_factory=Counter)
+
+    # Ids stay the same so the photos that are left keep their place in the browser
+    def drop(self, ids, picked=False):
+        self.gone.update(ids)
+        for section in self.sections:
+            left = [photo for photo in section["photos"] if photo["id"] not in self.gone]
+            # A group whose pick has moved out is settled, the frames passed over mustn't be offered again
+            if section["suggested"] in self.gone or (picked and len(left) < len(section["photos"])):
+                section["suggested"] = None
+            section["photos"] = left
+        self.sections = [section for section in self.sections if section["photos"]]
+
+    def remaining(self):
+        return [name for number, name in enumerate(self.names) if number not in self.gone]
 
 
 # A file name doesn't have to be valid text, but everything sent to the browser does
