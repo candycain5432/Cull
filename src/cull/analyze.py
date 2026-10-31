@@ -16,6 +16,11 @@ RAW_EXTS = {".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".rw2", ".raf"}
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 
+Image.MAX_IMAGE_PIXELS = 300_000_000 # Pillow's default stops at 179MP, phones now shoot 200MP
+
+# Corrupt, empty, fake or impossibly large image files raise one of these
+UNREADABLE = (UnidentifiedImageError, Image.DecompressionBombError, OSError, rawpy.LibRawError)
+
 
 @dataclass
 class Photo:
@@ -88,8 +93,7 @@ def measure(file):
                 "phash": phash(image),
             }
 
-    # Corrupt, empty or fake image files end up here
-    except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
+    except UNREADABLE as e:
         return {"error": str(e)}
 
 

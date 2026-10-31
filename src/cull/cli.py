@@ -3,13 +3,15 @@ import argparse
 import os
 import shutil
 from pathlib import Path
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS, IFD
-from colorama import Fore, Back,Style
+from colorama import Fore, Style, just_fix_windows_console
+from importlib.metadata import version
 import io
+import sys
 import rawpy
 from bisect import bisect_left
-from cull.analyze import IMAGE_EXTS, RAW_EXTS, analyze_folder
+from cull.analyze import IMAGE_EXTS, RAW_EXTS, UNREADABLE, analyze_folder
 from cull.exposure import DARK
 from cull.folders import output_folder, write_folders
 from cull.grouping import group_photos
@@ -20,14 +22,25 @@ from cull.sharpness import LONG_EDGE
 def print_summary(photos, skipped_bad, skipped_ext, fresh):
     print(f"\n{len(photos)} scored, {skipped_bad} unreadable, {skipped_ext} ignored by extension, {fresh} newly analyzed")
 
-# Main function
+# Entry point, stopping a long scan is normal so it shouldn't print a traceback
 def main():
-    
+    try:
+        run()
+    except KeyboardInterrupt:
+        print("\nStopped, photos analyzed so far are saved in the cache")
+        sys.exit(130)
+
+# Main function
+def run():
+    just_fix_windows_console() # So the colors work in older Windows terminals
+    sys.stdout.reconfigure(errors="replace") # So an odd file name can't crash a report
+
     # Adds the commands like --help and sort etc
     parser = argparse.ArgumentParser(prog="cull", description="Photo culling assistant",)
+    parser.add_argument("--version", action="version", version=f"cull {version('cull')}")
     sub = parser.add_subparsers(dest="command")
     
-    scan = sub.add_parser("scan", help="Analyze a folder of photos") # Adds <scan> command 
+    scan = sub.add_parser("scan", help="Print the EXIF data of every photo") # Adds <scan> command 
     sorter = sub.add_parser("sort", help="sort the photos into folders based on file extension") # Adds <sort> command
     sharp = sub.add_parser("sharpness", help="Rank photos from sharpest to blurriest") # Adds <sharpness> command
     expose = sub.add_parser("exposure", help="Rank photos from best to worst exposed") # Adds <exposure> command
@@ -41,6 +54,10 @@ def main():
     grouper.add_argument("folder", help="Path to the shoot")
 
     args = parser.parse_args()
+
+    # A typo in the path should be an error, <sort> would create the folder otherwise
+    if args.command and not os.path.isdir(args.folder):
+        parser.error(f"{args.folder} is not a folder")
     
     
 
@@ -78,8 +95,11 @@ def main():
             else:
                 dest = pathreject
             
-            # Move the file
-            shutil.move(src, dest)
+            # Move the file, this refuses to overwrite one that's already there
+            try:
+                shutil.move(src, dest)
+            except shutil.Error as e:
+                print(f"Skipping {file}: {e}")
 
 
     
@@ -147,7 +167,7 @@ def main():
                 scanned += 1
             
             # Corrupt, empty or fake image files end up here
-            except (UnidentifiedImageError, OSError, rawpy.LibRawError) as e:
+            except UNREADABLE as e:
                 print(f"Skipping {file.name}: {e}")
                 skipped_bad += 1
         
